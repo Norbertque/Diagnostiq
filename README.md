@@ -15,7 +15,14 @@ touchpad, audio, webcam, USB and network, with a printable report at the end.
 | `src/Diagnostiq` | WPF app (WPF-UI / Fluent) |
 | `tests/Diagnostiq.Core.Tests` | unit tests for Core logic |
 | `docs/design-tokens.md` | colors, type, spacing; contrast measurements |
-| `legacy/v1` | v1 sources, kept only until their logic is ported |
+
+## Sensors and PawnIO
+
+Exact CPU temperature and fan speed need the signed [PawnIO](https://pawnio.eu) driver (used by
+LibreHardwareMonitor since it dropped WinRing0, which Windows Defender flags). Without it,
+Diagnostiq falls back to ACPI thermal zones where the firmware has them and labels the value
+"limited". CPU load and real clock speed (throttling) come from Windows performance counters
+and work everywhere.
 
 ## Build
 

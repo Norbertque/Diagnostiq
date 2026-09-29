@@ -12,7 +12,9 @@
   <ItemGroup>
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
     <PackageReference Include="ManagedNativeWifi" Version="3.0.2" />
-    <PackageReference Include="NAudio" Version="3.1.0" />
+    <!-- NAudio sub-packages only: the NAudio metapackage pulls in WinForms. -->
+    <PackageReference Include="NAudio.Core" Version="3.1.0" />
+    <PackageReference Include="NAudio.Wasapi" Version="3.1.0" />
     <PackageReference Include="System.Management" Version="10.0.12" />
   </ItemGroup>
 
