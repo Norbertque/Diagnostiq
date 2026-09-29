@@ -1,0 +1,149 @@
+<!--
+  Diagnostiq design tokens. See docs/design-tokens.md.
+  Colors deliberately reuse WPF-UI's Fluent brushes (they switch with light/dark);
+  only what Fluent lacks is defined here: type ramp, spacing, radii, motion,
+  and semantic status/verdict styles. Diag.InfoForegroundBrush is the one color
+  Fluent gets wrong for small text in dark theme; ThemeService swaps it per theme.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- ===== Type ramp (Windows 11 Fluent) ===== -->
+    <FontFamily x:Key="Diag.Font.Text">Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="Diag.Font.Display">Segoe UI Variable Display, Segoe UI</FontFamily>
+    <FontFamily x:Key="Diag.Font.Mono">Cascadia Mono, Consolas</FontFamily>
+
+    <sys:Double x:Key="Diag.Size.Caption">12</sys:Double>
+    <sys:Double x:Key="Diag.Size.Body">14</sys:Double>
+    <sys:Double x:Key="Diag.Size.Subtitle">20</sys:Double>
+    <sys:Double x:Key="Diag.Size.Title">28</sys:Double>
+    <sys:Double x:Key="Diag.Size.TitleLarge">40</sys:Double>
+    <sys:Double x:Key="Diag.Size.Display">68</sys:Double>
+
+    <Style x:Key="Diag.Text.Caption" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Diag.Font.Text}" />
+        <Setter Property="FontSize" Value="{StaticResource Diag.Size.Caption}" />
+        <Setter Property="LineHeight" Value="16" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style x:Key="Diag.Text.Body" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Diag.Font.Text}" />
+        <Setter Property="FontSize" Value="{StaticResource Diag.Size.Body}" />
+        <Setter Property="LineHeight" Value="20" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style x:Key="Diag.Text.BodyStrong" TargetType="TextBlock" BasedOn="{StaticResource Diag.Text.Body}">
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style x:Key="Diag.Text.Subtitle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Diag.Font.Display}" />
+        <Setter Property="FontSize" Value="{StaticResource Diag.Size.Subtitle}" />
+        <Setter Property="LineHeight" Value="28" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style x:Key="Diag.Text.Title" TargetType="TextBlock" BasedOn="{StaticResource Diag.Text.Subtitle}">
+        <Setter Property="FontSize" Value="{StaticResource Diag.Size.Title}" />
+        <Setter Property="LineHeight" Value="36" />
+    </Style>
+    <Style x:Key="Diag.Text.TitleLarge" TargetType="TextBlock" BasedOn="{StaticResource Diag.Text.Subtitle}">
+        <Setter Property="FontSize" Value="{StaticResource Diag.Size.TitleLarge}" />
+        <Setter Property="LineHeight" Value="52" />
+    </Style>
+    <!-- Big numbers (gauges, health score): display face, tabular digits so values don't jitter. -->
+    <Style x:Key="Diag.Text.Metric" TargetType="TextBlock" BasedOn="{StaticResource Diag.Text.Subtitle}">
+        <Setter Property="FontSize" Value="{StaticResource Diag.Size.TitleLarge}" />
+        <Setter Property="LineHeight" Value="52" />
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+    </Style>
+    <Style x:Key="Diag.Text.Display" TargetType="TextBlock" BasedOn="{StaticResource Diag.Text.Metric}">
+        <Setter Property="FontSize" Value="{StaticResource Diag.Size.Display}" />
+        <Setter Property="LineHeight" Value="92" />
+    </Style>
+    <Style x:Key="Diag.Text.Mono" TargetType="TextBlock" BasedOn="{StaticResource Diag.Text.Body}">
+        <Setter Property="FontFamily" Value="{StaticResource Diag.Font.Mono}" />
+        <Setter Property="FontSize" Value="13" />
+    </Style>
+
+    <!-- ===== Spacing (4 px grid) ===== -->
+    <sys:Double x:Key="Diag.Space.1">4</sys:Double>
+    <sys:Double x:Key="Diag.Space.2">8</sys:Double>
+    <sys:Double x:Key="Diag.Space.3">12</sys:Double>
+    <sys:Double x:Key="Diag.Space.4">16</sys:Double>
+    <sys:Double x:Key="Diag.Space.5">24</sys:Double>
+    <sys:Double x:Key="Diag.Space.6">32</sys:Double>
+    <sys:Double x:Key="Diag.Space.7">48</sys:Double>
+    <sys:Double x:Key="Diag.Space.8">64</sys:Double>
+    <Thickness x:Key="Diag.Pad.Card">20</Thickness>
+    <Thickness x:Key="Diag.Pad.Page">32,24,32,32</Thickness>
+    <Thickness x:Key="Diag.Gap.Stack">0,0,0,12</Thickness>
+    <Thickness x:Key="Diag.Gap.Section">0,24,0,12</Thickness>
+
+    <!-- ===== Radii ===== -->
+    <CornerRadius x:Key="Diag.Radius.Control">4</CornerRadius>
+    <CornerRadius x:Key="Diag.Radius.Card">8</CornerRadius>
+    <CornerRadius x:Key="Diag.Radius.Surface">12</CornerRadius>
+    <CornerRadius x:Key="Diag.Radius.Pill">11</CornerRadius>
+
+    <!-- ===== Elevation: cards use a stroke, not a shadow; shadows only for raised surfaces. ===== -->
+    <DropShadowEffect x:Key="Diag.Elevation.Raised" BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.14" />
+
+    <!-- ===== Motion ===== -->
+    <Duration x:Key="Diag.Motion.Fast">0:0:0.083</Duration>
+    <Duration x:Key="Diag.Motion.Normal">0:0:0.167</Duration>
+    <Duration x:Key="Diag.Motion.Slow">0:0:0.25</Duration>
+    <Duration x:Key="Diag.Motion.Slide">0:0:0.3</Duration>
+    <KeySpline x:Key="Diag.Ease.Decelerate">0.1,0.9,0.2,1</KeySpline>
+
+    <!-- ===== Semantic colors ===== -->
+    <!-- Default (light) value; ThemeService replaces it with #99EBFF in dark theme (Fluent's #60CDFF is 4.41:1, below AA). -->
+    <SolidColorBrush x:Key="Diag.InfoForegroundBrush" Color="#005FB7" />
+
+    <!-- Surfaces -->
+    <Style x:Key="Diag.Card" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource Diag.Radius.Card}" />
+        <Setter Property="Padding" Value="{StaticResource Diag.Pad.Card}" />
+    </Style>
+    <Style x:Key="Diag.Surface" TargetType="Border" BasedOn="{StaticResource Diag.Card}">
+        <Setter Property="CornerRadius" Value="{StaticResource Diag.Radius.Surface}" />
+        <Setter Property="Padding" Value="24" />
+    </Style>
+
+    <!-- Status pills: Border + TextBlock pairs. All fg/bg pairs verified >= 4.5:1 in both themes. -->
+    <Style x:Key="Diag.Pill" TargetType="Border">
+        <Setter Property="CornerRadius" Value="{StaticResource Diag.Radius.Pill}" />
+        <Setter Property="Padding" Value="10,2,10,3" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="MinHeight" Value="22" />
+    </Style>
+    <Style x:Key="Diag.Pill.Pass" TargetType="Border" BasedOn="{StaticResource Diag.Pill}">
+        <Setter Property="Background" Value="{DynamicResource SystemFillColorSuccessBackgroundBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+    </Style>
+    <Style x:Key="Diag.Pill.Fail" TargetType="Border" BasedOn="{StaticResource Diag.Pill}">
+        <Setter Property="Background" Value="{DynamicResource SystemFillColorCriticalBackgroundBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+    </Style>
+    <Style x:Key="Diag.Pill.Warn" TargetType="Border" BasedOn="{StaticResource Diag.Pill}">
+        <Setter Property="Background" Value="{DynamicResource SystemFillColorCautionBackgroundBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+    </Style>
+    <Style x:Key="Diag.Pill.Info" TargetType="Border" BasedOn="{StaticResource Diag.Pill}">
+        <Setter Property="Background" Value="{DynamicResource SystemFillColorAttentionBackgroundBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Diag.InfoForegroundBrush}" />
+    </Style>
+    <!-- Untested/Skipped: secondary text, not SystemFillColorNeutral (3.29:1 in light theme). -->
+    <Style x:Key="Diag.Pill.Neutral" TargetType="Border" BasedOn="{StaticResource Diag.Pill}">
+        <Setter Property="Background" Value="{DynamicResource SystemFillColorNeutralBackgroundBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+    </Style>
+
+</ResourceDictionary>

@@ -1,29 +1,30 @@
-# Laptop Diagnostics
+# Diagnostiq
 
-Portable Windows tool that checks a laptop's hardware: identity and specs, battery health,
-storage health, temperatures under load, display, keyboard, touchpad, audio, webcam, USB and network.
+Portable Windows tool that checks any laptop (Dell, Lenovo, HP, ASUS, …): specs and identity,
+Windows 11 readiness, battery, storage health, stability under load, display, keyboard,
+touchpad, audio, webcam, USB and network, with a printable report at the end.
 
-## v1.0-refurb (this version)
+> **Status:** v2 is being rebuilt in WPF. The previous WinForms version (Dell refurbishment
+> edition with Excel inventory import) is preserved at tag **`v1.0-refurb`**.
 
-Built for a used-Dell-Latitude refurbishment run. Besides the tests it can write each
-laptop's condition and specs into the `Laptopy_prodej.xlsx` inventory:
+## Layout
 
-- **Save result (JSON)** on each tested laptop, then **Batch import** on the PC that has the
-  inventory (OneDrive-synced local copy, closed in Excel during the import).
-- Unknown serial numbers are added as new rows; the price formulas and the `CELKEM` count
-  follow automatically.
-
-v2 replaces the Excel workflow with a printable report and works on any laptop vendor.
+| Path | What |
+|---|---|
+| `src/Diagnostiq.Core` | UI-free services: hardware probes, stress/storage tests, scoring, report |
+| `src/Diagnostiq` | WPF app (WPF-UI / Fluent) |
+| `tests/Diagnostiq.Core.Tests` | unit tests for Core logic |
+| `docs/design-tokens.md` | colors, type, spacing; contrast measurements |
+| `legacy/v1` | v1 sources, kept only until their logic is ported |
 
 ## Build
 
-Requires the .NET 8 SDK on Windows.
+Requires the .NET 10 SDK on Windows 10/11.
 
-```
-dotnet publish KontrolniProtokol.csproj -c Release -r win-x64 --self-contained true ^
-  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true ^
-  -p:EnableCompressionInSingleFile=true -o publish
+```powershell
+.\build.ps1            # build + test
+.\build.ps1 -Publish   # also produce publish\Diagnostiq.exe (single portable file)
 ```
 
-`publish\KontrolniProtokol.exe` is a single portable file (~75 MB). It asks for administrator
-rights on start (needed for TPM, sensors and raw disk reads).
+The release exe asks for administrator rights (TPM, sensors, raw disk reads). Debug builds run
+without elevation; admin-only checks then report "Needs admin".

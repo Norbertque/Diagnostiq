@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Diagnostiq.Core/Diagnostiq.Core.csproj" />
+    <Project Path="src/Diagnostiq/Diagnostiq.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Diagnostiq.Core.Tests/Diagnostiq.Core.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Diagnostiq</AssemblyName>
+    <RootNamespace>Diagnostiq</RootNamespace>
+    <Product>Diagnostiq</Product>
+    <Version>2.0.0</Version>
+    <!-- AForge ships .NET Framework assemblies; they work on .NET 10 (used for the webcam slide). -->
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+  </PropertyGroup>
+
+  <!-- Release asks for admin (TPM, raw disk reads, PawnIO sensors). Debug runs as the
+       invoking user so the UI can be launched and screenshotted without a UAC prompt;
+       admin-only probes then report "Needs admin". -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' != 'Release'">
+    <ApplicationManifest>app.debug.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+    <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Diagnostiq.Core\Diagnostiq.Core.csproj" />
+  </ItemGroup>
+
+</Project>
