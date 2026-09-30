@@ -85,8 +85,12 @@ public static class BatteryLiveProbe
         int? percent = ps.BatteryLifePercent <= 100 ? ps.BatteryLifePercent : null;
 
         List<System.Management.ManagementBaseObject> status;
+        // WMI can also fail with COM errors while the service restarts; the power status above still stands.
         try { status = Wmi.Query("SELECT ChargeRate, DischargeRate, RemainingCapacity, Charging FROM BatteryStatus", Wmi.RootWmi); }
-        catch (System.Management.ManagementException) { status = []; }
+        catch (Exception ex) when (ex is System.Management.ManagementException or System.Runtime.InteropServices.COMException or UnauthorizedAccessException)
+        {
+            status = [];
+        }
         if (status.Count == 0) return new BatteryLive(percent, onAc, null, null, null, null);
 
         // Dual-battery laptops report one instance per pack.

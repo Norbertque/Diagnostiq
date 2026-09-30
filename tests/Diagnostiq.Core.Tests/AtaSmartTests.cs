@@ -47,21 +47,37 @@ public class AtaSmartTests
     [Fact]
     public void Reallocated_or_pending_sectors_are_problems()
     {
-        var drive = new SmartDrive("d", false, AtaSmart.Parse(Block((0x05, 100, 100, 8), (0xC5, 100, 100, 2)), null));
-        Assert.Contains(drive.Problems, p => p.StartsWith("Reallocated sectors"));
-        Assert.Contains(drive.Problems, p => p.StartsWith("Current pending sectors"));
+        var drive = new SmartDrive("d", false, AtaSmart.Parse(Block((0x05, 100, 100, 1200), (0xC5, 100, 100, 2)), null));
+        Assert.Contains($"Reallocated sectors: {1200:N0}.", drive.Problems);
+        Assert.Contains("Current pending sectors: 2.", drive.Problems);
     }
 
     [Fact]
     public void Value_at_threshold_fails()
     {
         var drive = new SmartDrive("d", false, AtaSmart.Parse(Block((0x01, 16, 16, 0)), Thresholds((0x01, 16))));
-        Assert.Contains(drive.Problems, p => p.Contains("below failure threshold"));
+        Assert.Contains("Read error rate has reached its failure threshold.", drive.Problems);
+    }
+
+    [Fact]
+    public void Worn_out_ssd_is_a_problem()
+    {
+        var drive = new SmartDrive("d", false, AtaSmart.Parse(Block((0xE7, 5, 5, 0)), null));
+        Assert.Equal(["Only 5% of the drive's rated life left."], drive.Problems);
     }
 
     [Fact]
     public void Failure_prediction_is_a_problem()
     {
-        Assert.False(new SmartDrive("d", true, []).Healthy);
+        var drive = new SmartDrive("d", true, []);
+        Assert.False(drive.Healthy);
+        Assert.Equal(["The drive predicts its own failure."], drive.Problems);
+    }
+
+    [Fact]
+    public void Problems_are_sentences_so_they_can_be_joined()
+    {
+        var drive = new SmartDrive("d", true, AtaSmart.Parse(Block((0x05, 100, 100, 8), (0xE9, 3, 3, 0)), null));
+        Assert.All(drive.Problems, p => Assert.EndsWith(".", p));
     }
 }

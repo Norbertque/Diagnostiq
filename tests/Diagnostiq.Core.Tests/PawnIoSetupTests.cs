@@ -36,4 +36,32 @@ public class PawnIoSetupTests
     {
         Assert.Null(PawnIoSetup.SplitCommand(@"""C:\PawnIO\uninstall.exe -uninstall"));
     }
+
+    // InstallAsync and UninstallAsync turn these into a failed result instead of throwing.
+    [Fact]
+    public void Setup_failures_become_messages()
+    {
+        Assert.True(PawnIoSetup.IsSetupFailure(new System.ComponentModel.Win32Exception(5)));
+        Assert.True(PawnIoSetup.IsSetupFailure(new InvalidDataException()));
+        Assert.True(PawnIoSetup.IsSetupFailure(new IOException("There is not enough space on the disk.")));
+        Assert.True(PawnIoSetup.IsSetupFailure(new UnauthorizedAccessException()));
+        Assert.False(PawnIoSetup.IsSetupFailure(new NullReferenceException()));
+    }
+
+    [Fact]
+    public void Blocked_setup_points_at_antivirus()
+    {
+        var text = PawnIoSetup.Explain(new System.ComponentModel.Win32Exception(5, "An error occurred trying to start process 'C:\\x\\PawnIO_setup.exe'."));
+        Assert.StartsWith("Windows couldn't start the setup (", text);
+        Assert.DoesNotContain("PawnIO_setup.exe", text);
+        Assert.EndsWith("Check that antivirus isn't blocking Diagnostiq.", text);
+    }
+
+    [Fact]
+    public void Corrupted_setup_says_to_download_again() =>
+        Assert.Contains("Download Diagnostiq again.", PawnIoSetup.Explain(new InvalidDataException("The bundled PawnIO setup is corrupted.")));
+
+    [Fact]
+    public void Other_failures_keep_their_reason() =>
+        Assert.Equal("There is not enough space on the disk.", PawnIoSetup.Explain(new IOException("There is not enough space on the disk.")));
 }

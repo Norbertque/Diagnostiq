@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
@@ -52,61 +53,96 @@ public static class PawnIoSetup
         _ => PawnIoState.Installed,
     };
 
-    /// <summary>Installs the bundled driver, replacing an outdated one. Takes a few seconds; call off the UI thread.</summary>
+    private const string RemoveByHand = "You can remove it in Settings › Apps › Installed apps.";
+
+    /// <summary>
+    /// Installs the bundled driver, replacing an outdated one. Takes a few seconds; call off the UI thread.
+    /// Never throws: failures (antivirus blocking the setup, a full disk) come back as a message for the user.
+    /// </summary>
     public static async Task<PawnIoSetupResult> InstallAsync()
     {
-        if (State == PawnIoState.Installed) return new(true, "PawnIO is already installed.");
-        if (!Probe.IsAdmin) return new(false, "Installing the sensor driver needs administrator rights.");
-
-        // The setup refuses to run over an existing install, so an outdated driver goes first.
-        if (State == PawnIoState.Outdated && !(await UninstallAsync().ConfigureAwait(false)).Success)
-            return new(false, "Couldn't remove the outdated PawnIO driver.");
-
-        var dir = CreatePrivateTempDirectory();
         try
         {
-            var exe = Path.Combine(dir, ResourceName);
-            await ExtractBundledAsync(exe).ConfigureAwait(false);
-            var exit = await RunAsync(exe, "-install -silent").ConfigureAwait(false);
-            if (State != PawnIoState.Installed)
-                return new(false, exit is null ? "The PawnIO setup didn't finish in time." : $"The PawnIO setup failed (code {exit}).");
-            InstalledByUs = true;
-            return new(true, "PawnIO installed.");
-        }
-        finally
-        {
-            try { Directory.Delete(dir, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
-        }
-    }
+            if (State == PawnIoState.Installed) return new(true, "The PawnIO sensor driver is already installed.");
+            if (!Probe.IsAdmin) return new(false, "Installing the sensor driver needs administrator rights.");
 
-    /// <summary>Removes the driver with its own registered uninstaller, falling back to the bundled setup.</summary>
-    public static async Task<PawnIoSetupResult> UninstallAsync()
-    {
-        if (State == PawnIoState.NotInstalled) return new(true, "PawnIO isn't installed.");
-        if (!Probe.IsAdmin) return new(false, "Removing the sensor driver needs administrator rights.");
+            // The setup refuses to run over an existing install, so an outdated driver goes first.
+            if (State == PawnIoState.Outdated && !(await UninstallAsync().ConfigureAwait(false)).Success)
+                return new(false, "Couldn't remove the outdated PawnIO sensor driver. Remove it in Settings › Apps › Installed apps, then try again.");
 
-        if (ReadQuietUninstallCommand() is { } registered && File.Exists(registered.File))
-            await RunAsync(registered.File, registered.Arguments).ConfigureAwait(false);
-
-        if (State != PawnIoState.NotInstalled)
-        {
             var dir = CreatePrivateTempDirectory();
             try
             {
                 var exe = Path.Combine(dir, ResourceName);
                 await ExtractBundledAsync(exe).ConfigureAwait(false);
-                await RunAsync(exe, "-uninstall -silent").ConfigureAwait(false);
+                var exit = await RunAsync(exe, "-install -silent").ConfigureAwait(false);
+                if (State != PawnIoState.Installed)
+                    return new(false, exit is null
+                        ? "The sensor driver setup didn't finish in time. Try again."
+                        : $"The sensor driver didn't install (setup error {exit}). Temperatures stay approximate; restart Windows and try again.");
+                InstalledByUs = true;
+                return new(true, "PawnIO sensor driver installed.");
             }
             finally
             {
                 try { Directory.Delete(dir, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
             }
         }
-
-        bool removed = State == PawnIoState.NotInstalled;
-        if (removed) InstalledByUs = false;
-        return new(removed, removed ? "PawnIO removed." : "Couldn't remove PawnIO.");
+        catch (Exception ex) when (IsSetupFailure(ex))
+        {
+            return new(false, $"The sensor driver couldn't be installed. {Explain(ex)}");
+        }
     }
+
+    /// <summary>Removes the driver with its own registered uninstaller, falling back to the bundled setup. Never throws.</summary>
+    public static async Task<PawnIoSetupResult> UninstallAsync()
+    {
+        try
+        {
+            if (State == PawnIoState.NotInstalled) return new(true, "The PawnIO sensor driver isn't installed.");
+            if (!Probe.IsAdmin) return new(false, "Removing the sensor driver needs administrator rights.");
+
+            if (ReadQuietUninstallCommand() is { } registered && File.Exists(registered.File))
+                await RunAsync(registered.File, registered.Arguments).ConfigureAwait(false);
+
+            if (State != PawnIoState.NotInstalled)
+            {
+                var dir = CreatePrivateTempDirectory();
+                try
+                {
+                    var exe = Path.Combine(dir, ResourceName);
+                    await ExtractBundledAsync(exe).ConfigureAwait(false);
+                    await RunAsync(exe, "-uninstall -silent").ConfigureAwait(false);
+                }
+                finally
+                {
+                    try { Directory.Delete(dir, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+                }
+            }
+
+            bool removed = State == PawnIoState.NotInstalled;
+            if (removed) InstalledByUs = false;
+            return new(removed, removed ? "PawnIO sensor driver removed." : $"Couldn't remove the PawnIO sensor driver. {RemoveByHand}");
+        }
+        catch (Exception ex) when (IsSetupFailure(ex))
+        {
+            return new(false, $"Couldn't remove the PawnIO sensor driver. {Explain(ex)} {RemoveByHand}");
+        }
+    }
+
+    /// <summary>What can go wrong around the setup: extracting it, checking it, starting it.</summary>
+    internal static bool IsSetupFailure(Exception ex) =>
+        ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException or Win32Exception;
+
+    /// <summary>Why, in a sentence for the message the user sees, with what to do when there's something specific.</summary>
+    internal static string Explain(Exception ex) => ex switch
+    {
+        // Process.Start's own message repeats the whole path; the system text alone is clearer.
+        Win32Exception w => $"Windows couldn't start the setup ({new Win32Exception(w.NativeErrorCode).Message.TrimEnd('.')}). " +
+                            "Check that antivirus isn't blocking Diagnostiq.",
+        InvalidDataException => "The setup inside this copy of Diagnostiq is damaged. Download Diagnostiq again.",
+        _ => $"{ex.Message.TrimEnd('.')}.",
+    };
 
     internal static Stream OpenBundled() =>
         typeof(PawnIoSetup).Assembly.GetManifestResourceStream(ResourceName)

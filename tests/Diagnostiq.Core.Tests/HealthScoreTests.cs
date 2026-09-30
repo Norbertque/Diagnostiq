@@ -66,8 +66,36 @@ public class HealthScoreTests
     }
 
     [Fact]
+    public void Battery_wear_is_described_as_capacity()
+    {
+        var h = HealthScore.Compute(Inputs(battery: 35));
+        Assert.Equal("Holds only 35% of its original capacity. Replace it.", h.Deductions.Single().Reason);
+    }
+
+    [Fact]
     public void Failing_drive_is_critical() =>
         Assert.Equal(HealthVerdict.NeedsRepair, HealthScore.Compute(Inputs(storage: CheckState.Fail)).Verdict);
+
+    [Fact]
+    public void Drive_warning_is_minor()
+    {
+        // Running hot or 80 % worn: worth knowing, but the drive works.
+        var h = HealthScore.Compute(Inputs(storage: CheckState.Warn));
+        Assert.Equal(95, h.Score);
+        Assert.Equal(HealthVerdict.Excellent, h.Verdict);
+        var d = Assert.Single(h.Deductions);
+        Assert.Equal(Severity.Minor, d.Severity);
+        Assert.Equal(HealthScore.Minor, d.Points);
+    }
+
+    [Fact]
+    public void Nothing_tested_is_flagged()
+    {
+        Assert.True(HealthScore.Compute(Inputs([])).NothingTested);
+        Assert.True(HealthScore.Compute(Inputs([R(TestIds.Keyboard, TestOutcome.Skipped)])).NothingTested);
+        Assert.False(HealthScore.Compute(Inputs([R(TestIds.Keyboard, TestOutcome.Pass)])).NothingTested);
+        Assert.False(HealthScore.Compute(Inputs()).NothingTested);
+    }
 
     [Fact]
     public void Many_majors_drop_below_sixty()

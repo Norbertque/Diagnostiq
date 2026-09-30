@@ -55,6 +55,18 @@ public class Win11ReadinessTests
         var r = Win11Readiness.Evaluate(Good with { Firmware = new FirmwareInfo(false, SecureBootState.NotAvailable) });
         Assert.Equal(Win11Verdict.ReadyAfterChanges, r.Verdict);
         Assert.Contains("mbr2gpt", Check(r, "uefi").Hint);
+        Assert.Contains("Windows 11 needs UEFI, the modern startup mode", Check(r, "uefi").Detail);
+    }
+
+    [Fact]
+    public void Tpm_is_explained_as_a_security_chip()
+    {
+        var tpm = Check(Win11Readiness.Evaluate(Good), "tpm");
+        Assert.Equal("TPM 2.0 security chip", tpm.Title);
+        Assert.Equal("TPM 2.0, switched on.", tpm.Detail);
+
+        var missing = Check(Win11Readiness.Evaluate(Good with { Tpm = new TpmInfo(false, null, null, null, null, null) }), "tpm");
+        Assert.StartsWith("Windows sees no TPM security chip.", missing.Detail);
     }
 
     [Fact]

@@ -10,7 +10,10 @@ public static class Evaluate
     /// <summary>Sequential reads below this are slow even for a hard drive in good shape.</summary>
     public const double SlowReadMBps = 100;
 
-    /// <summary>Results only for the parts that were selected, so a CPU-only run doesn't overwrite an earlier memory result.</summary>
+    /// <summary>
+    /// Results only for the parts that were selected, so a CPU-only run doesn't overwrite an earlier memory result.
+    /// A run stopped early (Skip or Exit) still reports the faults it found, but a clean partial run is Skipped, not Pass.
+    /// </summary>
     public static IEnumerable<TestResult> Stress(StressReport r)
     {
         if (r.Parts.HasFlag(StressParts.Cpu)) yield return Cpu(r, ran: r.Samples.Count >= 10);
@@ -23,21 +26,32 @@ public static class Evaluate
 
     private static TestResult Memory(StressReport r)
     {
+        const string title = "Memory";
         if (r.Memory is not { TestedBytes: > 0 } m)
-            return new(TestIds.Memory, "Memory", TestOutcome.Skipped, r.MemorySkipped ?? "Didn't run.");
+            return new(TestIds.Memory, title, TestOutcome.Skipped, r.MemorySkipped ?? "Didn't run.");
         string gb = $"{m.TestedBytes / (double)(1L << 30):0.#} GB";
-        return m.Errors > 0
-            ? new(TestIds.Memory, "Memory", TestOutcome.Fail, $"{m.Errors:N0} errors found in {gb} tested. A memory module is faulty.")
-            : new(TestIds.Memory, "Memory", TestOutcome.Pass, $"{gb} tested over {m.Passes} {(m.Passes == 1 ? "pass" : "passes")}, no errors.");
+        if (m.Errors > 0)
+            return new(TestIds.Memory, title, TestOutcome.Fail,
+                $"{m.Errors:N0} error{(m.Errors == 1 ? "" : "s")} found in {gb} tested. The memory is faulty and needs replacing.");
+        if (m.Passes == 0)
+            return new(TestIds.Memory, title, TestOutcome.Skipped, "Stopped before any memory was checked.");
+        if (r.Cancelled || m.Cancelled)
+            return new(TestIds.Memory, title, TestOutcome.Skipped, $"Stopped early: {gb} checked, no errors so far.");
+        return new(TestIds.Memory, title, TestOutcome.Pass, $"{gb} tested over {m.Passes} {(m.Passes == 1 ? "pass" : "passes")}, no errors.");
     }
 
     private static TestResult Scan(StressReport r)
     {
+        const string title = "Disk surface scan";
         if (r.Scan is not { ChunksRead: > 0 } s)
-            return new(TestIds.SurfaceScan, "Disk surface scan", TestOutcome.Skipped, r.ScanSkipped ?? "Didn't run.");
-        return s.Errors > 0
-            ? new(TestIds.SurfaceScan, "Disk surface scan", TestOutcome.Fail, $"{s.Errors} unreadable areas out of {s.ChunksRead:N0} read. The drive has bad sectors.")
-            : new(TestIds.SurfaceScan, "Disk surface scan", TestOutcome.Pass, $"{s.ChunksRead:N0} areas read across the whole disk, no errors ({s.AvgMBps:0} MB/s average).");
+            return new(TestIds.SurfaceScan, title, TestOutcome.Skipped, r.ScanSkipped ?? "Didn't run.");
+        if (s.Errors > 0)
+            return new(TestIds.SurfaceScan, title, TestOutcome.Fail,
+                $"{s.Errors:N0} unreadable area{(s.Errors == 1 ? "" : "s")} out of {s.ChunksRead:N0} read. " +
+                "The drive has bad sectors: back up your data and replace the drive.");
+        if (r.Cancelled || s.Cancelled)
+            return new(TestIds.SurfaceScan, title, TestOutcome.Skipped, $"Stopped early: {s.ChunksRead:N0} areas read, no errors so far.");
+        return new(TestIds.SurfaceScan, title, TestOutcome.Pass, $"{s.ChunksRead:N0} areas read across the whole disk, no errors ({s.AvgMBps:0} MB/s average).");
     }
 
     private static TestResult Cpu(StressReport r, bool ran)
@@ -45,16 +59,28 @@ public static class Evaluate
         const string title = "Processor under load";
         if (!ran) return new(TestIds.Cpu, title, TestOutcome.Skipped, "Stopped before enough data was collected.");
 
-        string temp = r.MaxTempC is { } max ? $"{max:0} °C max{(r.TempLimited ? " (approximate sensor)" : "")}" : "temperature not available";
-        string clock = r.Throttle.SustainedPerformancePercent is { } p ? $"{p:0}% of base clock sustained" : "clock not measured";
+        string temp = r.MaxTempC is { } max ? $"{max:0} °C max{(r.TempLimited ? ", approximate sensor" : "")}" : "temperature not available";
+        double? held = r.Throttle.SustainedPerformancePercent;
 
         if (r.Throttle is { Throttled: true, Reason: "thermal" })
-            return new(TestIds.Cpu, title, TestOutcome.Fail, $"Thermal throttling: {clock} at {temp}. Clean the fan and renew the thermal paste.");
+            return new(TestIds.Cpu, title, TestOutcome.Fail,
+                $"Overheating slowed the processor to {held:0}% of its base speed (thermal throttling, {temp}). " +
+                "Clean the fan and vents and replace the thermal paste.");
         if (r.MaxTempC >= 100 && !r.TempLimited)
-            return new(TestIds.Cpu, title, TestOutcome.Fail, $"Overheating: reached {r.MaxTempC:0} °C.");
+            return new(TestIds.Cpu, title, TestOutcome.Fail,
+                $"Overheated, reaching {r.MaxTempC:0} °C. Clean the fan and vents and replace the thermal paste.");
         if (r.Throttle is { Throttled: true })
-            return new(TestIds.Cpu, title, TestOutcome.Warn, $"Held only {clock} while cool ({temp}). Check the charger and power settings.");
-        return new(TestIds.Cpu, title, TestOutcome.Pass, $"Stable. {char.ToUpperInvariant(clock[0])}{clock[1..]}, {temp}.");
+            return new(TestIds.Cpu, title, TestOutcome.Warn,
+                $"Held only {held:0}% of its base speed while cool ({temp}). " +
+                "Check that the laptop's own charger is plugged in and Windows isn't set to a power-saving mode.");
+        if (r.Cancelled)
+            return new(TestIds.Cpu, title, TestOutcome.Skipped, $"Stopped early, stable so far ({temp}).");
+
+        // The speed check only uses samples on AC, so a run on battery has no verdict on speed.
+        string speed = held is { } p ? $"Held {p:0}% of its base speed."
+            : r.Samples.Any(s => s.OnAcPower == false && s.PerformancePercent is not null) ? "Speed not checked because it ran on battery."
+            : "Speed couldn't be measured.";
+        return new(TestIds.Cpu, title, TestOutcome.Pass, $"Stable, {temp}. {speed}");
     }
 
     public static TestResult DiskSpeed(DiskBenchmarkResult b)

@@ -57,16 +57,16 @@ public static class AtaSmart
         return list;
     }
 
-    /// <summary>Human-readable problems; empty list means healthy.</summary>
+    /// <summary>Human-readable problems, each a sentence (the UI joins them with spaces); empty list means healthy.</summary>
     public static IReadOnlyList<string> Evaluate(SmartDrive drive)
     {
         var problems = new List<string>();
-        if (drive.PredictFailure) problems.Add("Drive predicts its own failure");
+        if (drive.PredictFailure) problems.Add("The drive predicts its own failure.");
         foreach (var a in drive.Attributes)
         {
-            if (a.BelowThreshold) problems.Add($"{a.Name} below failure threshold");
-            if (a.Id is 0x05 or 0xC5 or 0xC6 && a.Raw > 0) problems.Add($"{a.Name}: {a.Raw}");
-            if (a.Id is 0xE7 or 0xE9 && a.Current is > 0 and < 10) problems.Add($"{a.Name}: {a.Current}% left");
+            if (a.BelowThreshold) problems.Add($"{a.Name} has reached its failure threshold.");
+            if (a.Id is 0x05 or 0xC5 or 0xC6 && a.Raw > 0) problems.Add($"{a.Name}: {a.Raw:N0}.");
+            if (a.Id is 0xE7 or 0xE9 && a.Current is > 0 and < 10) problems.Add($"Only {a.Current}% of the drive's rated life left.");
         }
         return problems.Distinct().ToList();
     }

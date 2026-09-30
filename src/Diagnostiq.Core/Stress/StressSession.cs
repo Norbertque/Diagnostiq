@@ -64,79 +64,110 @@ public sealed class StressSession(SensorService? sensors, int? scanDisk, TimeSpa
 
     public TimeSpan Duration => duration;
 
+    /// <summary>
+    /// Runs for <see cref="Duration"/>. Cancelling <paramref name="ct"/> (Skip or Exit) returns early with
+    /// <see cref="StressReport.Cancelled"/> set; reaching the end of the time doesn't count as cancelled.
+    /// </summary>
     public async Task<StressReport> RunAsync(CancellationToken ct = default)
     {
         var sw = Stopwatch.StartNew();
         var samples = new List<StressSample>();
         using var cpu = new CpuStress();
-        if (parts.HasFlag(StressParts.Cpu)) cpu.Start();
-
-        var memoryTask = parts.HasFlag(StressParts.Memory)
-            ? MemoryPatternTest.RunAsync(duration, progress: new Callback<MemoryTestProgress>(p => _memory = p), ct: ct)
-            : null;
+        // The memory test and disk scan also stop if sampling fails, so an error never leaves
+        // most of the RAM pinned and the disk being read in the background.
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        Task<MemoryTestResult>? memoryTask = null;
         Task<SurfaceScanResult>? scanTask = null;
-        string? scanSkipped = null;
-        if (parts.HasFlag(StressParts.DiskScan))
-        {
-            if (scanDisk is { } disk) scanTask = SurfaceScan.RunAsync(disk, duration, new Callback<ScanProgress>(p => _scan = p), ct);
-            else scanSkipped = "No internal system disk to scan.";
-        }
-
-        int tick = 0;
-        BatteryLive? battery = BatteryLiveProbe.Read();
         try
         {
-            while (sw.Elapsed < duration && !ct.IsCancellationRequested)
+            if (parts.HasFlag(StressParts.Cpu)) cpu.Start();
+            if (parts.HasFlag(StressParts.Memory))
+                memoryTask = MemoryPatternTest.RunAsync(duration, progress: new Callback<MemoryTestProgress>(p => _memory = p), ct: stop.Token);
+            string? scanSkipped = null;
+            if (parts.HasFlag(StressParts.DiskScan))
             {
-                try { await Task.Delay(SampleEvery, ct).ConfigureAwait(false); }
-                catch (OperationCanceledException) { break; }
-
-                if (tick++ % 2 == 0) battery = TryReadBattery() ?? battery;   // WMI; every 2 s is plenty
-                var reading = sensors?.Read();
-                var sample = new StressSample(sw.Elapsed,
-                    reading?.CpuLoadPercent, reading?.CpuTempC, reading?.CpuTempLimited ?? false,
-                    reading?.CpuClockMHz, reading?.CpuPerformancePercent,
-                    reading?.Fans.Count > 0 ? reading.Fans.Max(f => f.Rpm) : null,
-                    battery?.OnAcPower, battery?.ChargePercent, battery?.DischargeWatts);
-                samples.Add(sample);
-                Progress?.Invoke(new StressProgress(sw.Elapsed, duration, sample, _memory, _scan));
+                if (scanDisk is { } disk) scanTask = SurfaceScan.RunAsync(disk, duration, new Callback<ScanProgress>(p => _scan = p), stop.Token);
+                else scanSkipped = "No internal system disk to scan.";
             }
-        }
-        finally
-        {
-            cpu.Stop();
-        }
 
-        MemoryTestResult? memory = null;
-        string? memorySkipped = null;
-        if (memoryTask is not null)
-        {
-            try { memory = await memoryTask.ConfigureAwait(false); }
-            catch (Exception ex) when (ex is not OperationCanceledException) { memorySkipped = ex.Message; }
-        }
+            int tick = 0;
+            BatteryLive? battery = TryReadBattery();
+            try
+            {
+                while (sw.Elapsed < duration && !ct.IsCancellationRequested)
+                {
+                    try { await Task.Delay(SampleEvery, ct).ConfigureAwait(false); }
+                    catch (OperationCanceledException) { break; }
 
-        SurfaceScanResult? scan = null;
-        if (scanTask is not null)
-        {
-            try { scan = await scanTask.ConfigureAwait(false); }
-            catch (UnauthorizedAccessException) { scanSkipped = "Needs administrator rights."; }
-            catch (IOException ex) { scanSkipped = ex.Message; }
-        }
+                    if (tick++ % 2 == 0) battery = TryReadBattery() ?? battery;   // WMI; every 2 s is plenty
+                    var reading = TryReadSensors();
+                    var sample = new StressSample(sw.Elapsed,
+                        reading?.CpuLoadPercent, reading?.CpuTempC, reading?.CpuTempLimited ?? false,
+                        reading?.CpuClockMHz, reading?.CpuPerformancePercent,
+                        reading?.Fans.Count > 0 ? reading.Fans.Max(f => f.Rpm) : null,
+                        battery?.OnAcPower, battery?.ChargePercent, battery?.DischargeWatts);
+                    samples.Add(sample);
+                    Progress?.Invoke(new StressProgress(sw.Elapsed, duration, sample, _memory, _scan));
+                }
+            }
+            finally
+            {
+                cpu.Stop();
+            }
 
-        var temps = samples.Where(s => s.CpuTempC is not null).Select(s => s.CpuTempC!.Value).ToList();
-        return new StressReport(sw.Elapsed, ct.IsCancellationRequested, samples,
-            temps.Count > 0 ? temps.Max() : null,
-            temps.Count > 0 ? temps.Average() : null,
-            samples.Any(s => s.TempLimited),
-            AnalyzeThrottle(samples),
-            memory, memorySkipped, scan, scanSkipped,
-            AnalyzeDrain(samples, battery), parts);
+            MemoryTestResult? memory = null;
+            string? memorySkipped = null;
+            if (memoryTask is not null)
+            {
+                try { memory = await memoryTask.ConfigureAwait(false); }
+                catch (Exception ex) when (ex is not OperationCanceledException) { memorySkipped = ex.Message; }
+            }
+
+            SurfaceScanResult? scan = null;
+            if (scanTask is not null)
+            {
+                try { scan = await scanTask.ConfigureAwait(false); }
+                catch (UnauthorizedAccessException) { scanSkipped = "Needs administrator rights."; }
+                catch (IOException ex) { scanSkipped = ex.Message; }
+            }
+
+            var temps = samples.Where(s => s.CpuTempC is not null).Select(s => s.CpuTempC!.Value).ToList();
+            return new StressReport(sw.Elapsed, ct.IsCancellationRequested, samples,
+                temps.Count > 0 ? temps.Max() : null,
+                temps.Count > 0 ? temps.Average() : null,
+                samples.Any(s => s.TempLimited),
+                AnalyzeThrottle(samples),
+                memory, memorySkipped, scan, scanSkipped,
+                AnalyzeDrain(samples, battery), parts);
+        }
+        catch
+        {
+            stop.Cancel();
+            await Settle(memoryTask).ConfigureAwait(false);
+            await Settle(scanTask).ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    /// <summary>Waits for a background part to wind down after the run already failed; its own outcome no longer matters.</summary>
+    private static async Task Settle(Task? task)
+    {
+        if (task is null) return;
+        try { await task.ConfigureAwait(false); }
+        catch (Exception) { }
     }
 
     private static BatteryLive? TryReadBattery()
     {
         try { return BatteryLiveProbe.Read(); }
-        catch (Exception ex) when (ex is System.Management.ManagementException or System.Runtime.InteropServices.COMException) { return null; }
+        catch (Exception ex) when (ex is System.Management.ManagementException or System.Runtime.InteropServices.COMException or UnauthorizedAccessException) { return null; }
+    }
+
+    /// <summary>A sensor hiccup costs one sample's readings, not the whole run.</summary>
+    private SensorReading? TryReadSensors()
+    {
+        try { return sensors?.Read(); }
+        catch (Exception) { return null; }
     }
 
     /// <summary>

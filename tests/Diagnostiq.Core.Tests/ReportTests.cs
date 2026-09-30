@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Diagnostiq.Core.Reporting;
 using Diagnostiq.Core.Scoring;
+using Diagnostiq.Core.Testing;
 
 namespace Diagnostiq.Core.Tests;
 
@@ -33,6 +34,29 @@ public class ReportTests
         Assert.Contains("<svg", html);                     // stress chart
         Assert.Contains("Not tested:", html);
         Assert.DoesNotContain("<script", html);
+    }
+
+    [Fact]
+    public void Untested_laptop_isnt_reported_as_problem_free()
+    {
+        // A healthy battery and drive alone give 100: the report must say nothing was tested.
+        var run = new TestRun();
+        run.Record(new(TestIds.Webcam, "Camera", TestOutcome.Skipped));
+        var model = ReportModel.Build(TestSnapshots.Create(), run);
+        Assert.True(model.Health.NothingTested);
+
+        var html = HtmlReport.Render(model);
+        Assert.Contains("No tests run yet, so this score only covers battery wear, drive health and driver problems.", html);
+        Assert.DoesNotContain("No problems found", html);
+    }
+
+    [Fact]
+    public void Clean_tested_laptop_says_no_problems_found()
+    {
+        var clean = Sample() with { Health = new ReportHealth(100, "Excellent", [], [], ["USB ports"]) };
+        var html = HtmlReport.Render(clean);
+        Assert.Contains("No problems found in the tests that were run.", html);
+        Assert.DoesNotContain("No tests run yet", html);
     }
 
     [Fact]
