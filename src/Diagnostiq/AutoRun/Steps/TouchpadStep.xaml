@@ -21,8 +21,7 @@
 
         <Border x:Name="Surface" Grid.Row="1" CornerRadius="12" BorderThickness="1" Background="{DynamicResource ControlFillColorDefaultBrush}"
                 BorderBrush="{DynamicResource ControlStrongStrokeColorDefaultBrush}" ClipToBounds="True"
-                MouseMove="Surface_MouseMove" MouseLeftButtonDown="Surface_Left" MouseRightButtonDown="Surface_Right" MouseWheel="Surface_Wheel"
-                AutomationProperties.Name="Touchpad test area">
+                MouseMove="Surface_MouseMove" MouseLeftButtonDown="Surface_Left" MouseRightButtonDown="Surface_Right" MouseWheel="Surface_Wheel">
             <UniformGrid x:Name="Cells" />
         </Border>
 

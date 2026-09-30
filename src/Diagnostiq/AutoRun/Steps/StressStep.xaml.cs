@@ -75,7 +75,7 @@ public partial class StressStep : StepView
         var report = await session.RunAsync(ct);
         if (disk is null && !Ctx.Snapshot.IsAdmin && _parts.HasFlag(StressParts.DiskScan)) report = report with { ScanSkipped = "Needs administrator rights." };
 
-        Ctx.Run.Stress = report;
+        Ctx.Run.RecordStress(report);   // a stopped re-run doesn't replace a complete report
         foreach (var result in Evaluate.Stress(report)) Ctx.Run.Record(result);
         ShowFinal();
         ct.ThrowIfCancellationRequested();

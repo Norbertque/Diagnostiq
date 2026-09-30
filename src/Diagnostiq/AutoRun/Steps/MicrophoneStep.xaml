@@ -16,8 +16,7 @@
 
             <!-- Level meter: width follows the live peak. -->
             <Border Height="24" CornerRadius="12" Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                    BorderBrush="{DynamicResource ControlStrongStrokeColorDefaultBrush}" BorderThickness="1" ClipToBounds="True"
-                    AutomationProperties.Name="Microphone level">
+                    BorderBrush="{DynamicResource ControlStrongStrokeColorDefaultBrush}" BorderThickness="1" ClipToBounds="True">
                 <Border x:Name="LevelFill" HorizontalAlignment="Left" Width="0" CornerRadius="12" Background="{DynamicResource AccentFillColorDefaultBrush}" />
             </Border>
 

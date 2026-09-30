@@ -36,8 +36,10 @@ public partial class BrightnessStep : StepView
         {
             ct.ThrowIfCancellationRequested();
             _lastSet = level;
-            try { await Task.Run(() => BrightnessControl.Set(level), ct); }
-            catch (Exception ex) when (IsWmiError(ex))
+            bool changed;
+            try { changed = await Task.Run(() => BrightnessControl.Set(level), ct); }
+            catch (Exception ex) when (IsWmiError(ex)) { changed = false; }
+            if (!changed)
             {
                 // A firmware or driver refusal: the keys can still be tested, and the user judges the rest.
                 // Watch from the level the panel really has, or the refused one would pass as a key press.

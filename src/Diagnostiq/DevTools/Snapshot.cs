@@ -147,7 +147,7 @@ internal static class Snapshot
     private static readonly Core.Testing.TestResult[] SampleResults =
     [
         new("network", "Wi-Fi and internet", Core.Testing.TestOutcome.Pass, "Online through Home, 14 ms. The Wi-Fi adapter sees 6 networks."),
-        new("cpu", "Processor under load", Core.Testing.TestOutcome.Pass, "Stable. 118% of base clock sustained, 91 °C max."),
+        new("cpu", "Processor under load", Core.Testing.TestOutcome.Pass, "Stable, 91 °C max. Held 118% of its base speed."),
         new("memory", "Memory", Core.Testing.TestOutcome.Pass, "9.8 GB tested over 3 passes, no errors."),
         new("surface", "Disk surface scan", Core.Testing.TestOutcome.Skipped, "Needs administrator rights."),
         new("diskspeed", "Disk speed", Core.Testing.TestOutcome.Pass, "Read 3,120 MB/s, write 1,870 MB/s, 21,400 random reads per second."),

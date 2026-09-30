@@ -29,7 +29,7 @@ public sealed class ScoreCard : Border
 
         var right = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         // Before any test, the score only reflects what the startup scan found; don't let it read as a clean bill.
-        bool nothingTested = h.NotTested.Count == HealthScore.Expected.Length;
+        bool nothingTested = h.NothingTested;
         if (nothingTested)
         {
             var note = Body("No tests run yet, so this score only covers battery wear, drive health and driver problems.");
