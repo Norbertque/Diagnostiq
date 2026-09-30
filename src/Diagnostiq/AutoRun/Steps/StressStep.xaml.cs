@@ -120,14 +120,14 @@ public partial class StressStep : StepView
         {
             MemoryIcon.Outcome = m.Errors > 0 ? TestOutcome.Fail : null;
             MemoryText.Text = $"Pass {m.Pass}, pattern {m.Pattern}";
-            MemorySub.Text = $"{m.TestedBytes / (double)(1L << 30):0.#} GB tested · {m.Errors:N0} errors";
+            MemorySub.Text = $"{m.TestedBytes / (double)(1L << 30):0.#} GB tested · {m.Errors:N0} error{(m.Errors == 1 ? "" : "s")}";
         }
 
         if (p.Scan is { } scan)
         {
             ScanIcon.Outcome = scan.Errors > 0 ? TestOutcome.Fail : null;
             ScanText.Text = $"{scan.ChunksRead:N0} areas read · {scan.CurrentMBps:0} MB/s";
-            ScanSub.Text = $"{scan.Errors:N0} read errors";
+            ScanSub.Text = $"{scan.Errors:N0} read error{(scan.Errors == 1 ? "" : "s")}";
         }
 
         if (_batteryPresent && s.OnAcPower == false)
@@ -138,7 +138,7 @@ public partial class StressStep : StepView
         else if (_batteryPresent)
         {
             BatteryTitle.Text = "Optional: measure the battery under load";
-            BatteryText.Text = "Unplug the charger now and the rest of the run doubles as a battery drain test. You'll be asked to plug it back in later.";
+            BatteryText.Text = "Unplug the charger now to measure how fast the battery drains under full load. Plug it back in when the test ends.";
         }
     }
 

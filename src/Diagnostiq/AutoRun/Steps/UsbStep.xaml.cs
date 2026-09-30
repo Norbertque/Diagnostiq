@@ -35,7 +35,7 @@ public partial class UsbStep : StepView
         int ports = _watcher?.PortCount ?? 0;
         _log.Insert(0, new Row(a.NewPort ? CheckState.Pass : null, a.Name, a.NewPort ? $"Port {ports}" : "Same port as before"));
         Count.Text = ports.ToString();
-        CountLabel.Text = ports == 1 ? "port working" : "ports working";
+        CountLabel.Text = ports == 1 ? "port checked so far" : "ports checked so far";
         if (ports > 0) Ctx.Suggest(TestOutcome.Pass);
     }
 
@@ -57,5 +57,9 @@ public partial class UsbStep : StepView
         _watcher = null;
     }
 
-    private sealed record Row(CheckState? State, string Name, string Note);
+    private sealed record Row(CheckState? State, string Name, string Note)
+    {
+        /// <summary>What screen readers announce for the row (the tick is otherwise only an icon).</summary>
+        public override string ToString() => State == CheckState.Pass ? $"{Name}: {Note} works." : $"{Name}: {Note}.";
+    }
 }

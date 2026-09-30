@@ -1,3 +1,5 @@
+using System.Management;
+using System.Runtime.InteropServices;
 using Diagnostiq.Core;
 using Diagnostiq.Core.Hardware;
 using Diagnostiq.Core.Testing;
@@ -12,7 +14,7 @@ public partial class BrightnessStep : StepView
 {
     private int? _original;
     private volatile int _lastSet = -1;
-    private bool _keysWorked;
+    private bool _keysWorked, _sweepFailed;
     private CancellationTokenSource? _watch;
 
     public BrightnessStep() => InitializeComponent();
@@ -34,17 +36,27 @@ public partial class BrightnessStep : StepView
         {
             ct.ThrowIfCancellationRequested();
             _lastSet = level;
-            await Task.Run(() => BrightnessControl.Set(level), ct);
+            try { await Task.Run(() => BrightnessControl.Set(level), ct); }
+            catch (Exception ex) when (IsWmiError(ex))
+            {
+                // A firmware or driver refusal: the keys can still be tested, and the user judges the rest.
+                // Watch from the level the panel really has, or the refused one would pass as a key press.
+                _sweepFailed = true;
+                _lastSet = await Task.Run(BrightnessControl.Current, ct) ?? _lastSet;
+                break;
+            }
             Level.Text = $"{level}%";
             await Task.Delay(90, ct);
         }
-        SweepIcon.State = CheckState.Pass;
-        SweepText.Text = "Done. Did it change smoothly?";
+        SweepIcon.State = _sweepFailed ? CheckState.Warn : CheckState.Pass;
+        SweepText.Text = _sweepFailed ? "Windows couldn't change the brightness." : "Done. Did it change smoothly?";
         KeysText.Text = "Press your brightness keys now.";
 
         _watch = CancellationTokenSource.CreateLinkedTokenSource(ct);
         _ = WatchKeysAsync(_watch.Token);
     }
+
+    private static bool IsWmiError(Exception ex) => ex is ManagementException or COMException;
 
     private static IEnumerable<int> Steps(int from, int to)
     {
@@ -60,7 +72,9 @@ public partial class BrightnessStep : StepView
             while (!ct.IsCancellationRequested)
             {
                 await Task.Delay(300, ct);
-                var now = await Task.Run(BrightnessControl.Current, ct);
+                int? now;
+                try { now = await Task.Run(BrightnessControl.Current, ct); }
+                catch (COMException) { continue; }   // WMI busy for a moment: try again next tick
                 if (now is null) continue;
                 Level.Text = $"{now}%";
                 if (!_keysWorked && now != _lastSet)
@@ -77,8 +91,10 @@ public partial class BrightnessStep : StepView
 
     protected override string? Detail(TestOutcome outcome) => outcome switch
     {
+        TestOutcome.Pass when _sweepFailed => _keysWorked ? "Brightness keys work; Windows couldn't change the brightness itself."
+                                                          : "Windows couldn't change the brightness itself. Brightness keys weren't tried.",
         TestOutcome.Pass => _keysWorked ? "Changes smoothly; brightness keys work." : "Changes smoothly. Brightness keys weren't tried.",
-        TestOutcome.Fail => "Brightness problem reported" + (_keysWorked ? "." : "; the brightness keys didn't respond."),
+        TestOutcome.Fail => "Brightness problem reported" + (_keysWorked ? "; the brightness keys work." : "; no brightness key press was detected."),
         _ => null,
     };
 
@@ -86,6 +102,6 @@ public partial class BrightnessStep : StepView
     {
         _watch?.Cancel();
         if (_original is { } level)
-            Task.Run(() => { try { BrightnessControl.Set(level); } catch (System.Management.ManagementException) { } });
+            Task.Run(() => { try { BrightnessControl.Set(level); } catch (Exception ex) when (IsWmiError(ex)) { } });
     }
 }

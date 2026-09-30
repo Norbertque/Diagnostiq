@@ -17,8 +17,10 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Keyboard" AutomationProperties.HeadingLevel="Level1" />
-                <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,6,24,0" MaxWidth="820" HorizontalAlignment="Left"
+                <TextBlock Style="{StaticResource Diag.Text.Instruction}" Margin="0,6,24,0" MaxWidth="880" HorizontalAlignment="Left"
                            Text="Press every key once; each one turns green when it works. Esc, Windows and Alt+Tab are captured here, so they won't close anything. Fn can't be detected on its own: test it with the brightness or volume keys." />
+                <TextBlock Style="{StaticResource Diag.Text.Instruction}" Margin="0,6,24,0" MaxWidth="880" HorizontalAlignment="Left"
+                           Text="Can't finish? Hold Esc for 2 seconds to mark the keyboard as failed." />
             </StackPanel>
             <StackPanel Grid.Column="1" VerticalAlignment="Bottom">
                 <TextBlock x:Name="Counter" Style="{StaticResource Diag.Text.Metric}" HorizontalAlignment="Right" />
@@ -33,6 +35,7 @@
         <StackPanel Grid.Row="2">
             <TextBlock x:Name="Missing" Style="{StaticResource Diag.Text.Body}" />
             <TextBlock x:Name="Others" Style="{StaticResource Diag.Text.Caption}" Margin="0,6,0,0" />
+            <!-- Mouse only: every key is captured while this test runs (the ISO-only key also switches by itself). -->
             <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                 <TextBlock Style="{StaticResource Diag.Text.Caption}" Text="Keyboard shape:" VerticalAlignment="Center" Margin="0,0,8,0" />
                 <ui:Button x:Name="IsoButton" Content="ISO (Europe)" Padding="10,4" Focusable="False" Click="Iso_Click" />

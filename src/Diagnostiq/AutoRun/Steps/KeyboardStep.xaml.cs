@@ -15,6 +15,10 @@ namespace Diagnostiq.AutoRun.Steps;
 public partial class KeyboardStep : StepView
 {
     private const double Unit = 56, Gap = 4, KeyHeight = 52;
+    private const int EscScan = 0x01;
+
+    /// <summary>The keyboard-only way out: every key is captured here, so Pass, Fail and Skip can't be reached by keys.</summary>
+    private static readonly TimeSpan EscHoldToFail = TimeSpan.FromSeconds(2);
 
     private readonly Dictionary<(int, bool), List<Border>> _keys = [];
     private readonly Dictionary<(int, bool), string> _labels = [];
@@ -23,6 +27,7 @@ public partial class KeyboardStep : StepView
     private readonly Dictionary<(int, bool), DateTime> _firstSeen = [];
     private readonly SortedSet<string> _others = [];
     private KeyboardHook? _hook;
+    private DateTime? _escHeldSince;
     private bool _iso, _finishing;
 
     public KeyboardStep() => InitializeComponent();
@@ -72,12 +77,16 @@ public partial class KeyboardStep : StepView
 
     private Border MakeKey(KeyDef k, double height, double bottomGap = 0)
     {
-        // ISO Enter is drawn as two shapes; label only the first so it reads as one key.
-        var label = !k.IsGap && _keys.ContainsKey(k.Id) ? "" : KeyLayout.Label(k);
+        // ISO Enter is two shapes for one key: the upper one carries the label, the lower one reaches up
+        // through the row gap and covers the upper one's bottom edge, so the two read as one keycap.
+        bool isoEnter = _iso && !k.IsGap && k.Id == (0x1C, false);
+        bool lowerHalf = isoEnter && _keys.ContainsKey(k.Id);
+        var label = lowerHalf ? "" : KeyLayout.Label(k);
         var text = new TextBlock
         {
-            Text = label, FontSize = label.Length > 3 ? 12 : 15, HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis,
+            Text = label, FontSize = label.Length == 1 ? 15 : 12,   // letters and symbols large, named keys small
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
         };
         var key = new Border
         {
@@ -98,11 +107,34 @@ public partial class KeyboardStep : StepView
             _labels.TryAdd(k.Id, label);
             if (!k.Optional) _required.Add(k.Id);
         }
-        return key;
+
+        if (isoEnter && !lowerHalf) key.CornerRadius = new CornerRadius(6, 6, 0, 6);
+        if (!lowerHalf) return key;
+
+        // The key fill is translucent, so the lower half sits on an opaque patch of the page colour
+        // that hides the upper half's bottom edge where the two meet (2 px, so no anti-aliased seam is left
+        // when the board is scaled).
+        const double overlap = 2;
+        key.Height = height + Gap + overlap;
+        key.Margin = new Thickness(0);
+        key.BorderThickness = new Thickness(1, 0, 1, 1);
+        key.CornerRadius = new CornerRadius(0, 0, 6, 6);
+        var patch = new Border { Child = key, CornerRadius = key.CornerRadius, Margin = new Thickness(0, -(Gap + overlap), Gap, bottomGap) };
+        patch.SetResourceReference(Border.BackgroundProperty, "SolidBackgroundFillColorBaseBrush");
+        return patch;
     }
 
     private void OnKey(KeyEvent e)
     {
+        if (_hook is null) return;   // queued before the step ended: must not judge the next one
+
+        // Holding Esc repeats its key-down; after 2 s the keyboard is failed (Detail lists the missing keys).
+        if (e.Scan == EscScan && !e.Extended)
+        {
+            if (!e.Down) _escHeldSince = null;
+            else if (DateTime.UtcNow - (_escHeldSince ??= DateTime.UtcNow) >= EscHoldToFail) { Ctx.Judge(TestOutcome.Fail); return; }
+        }
+
         var id = (e.Scan, e.Extended);
         if (e.Vk == 0xA1) id = (0x36, false);          // right Shift reports odd flags on some boards
         if (e.Scan == 0x2A && e.Extended) return;       // "fake shift" sent around arrows/Num Lock
@@ -138,11 +170,12 @@ public partial class KeyboardStep : StepView
         bool done = _done.Contains(key);
         foreach (var b in borders)
         {
-            string bg = pressed ? "AccentFillColorDefaultBrush" : done ? "SystemFillColorSuccessBackgroundBrush" : "ControlFillColorDefaultBrush";
+            // Keys that worked get a solid fill, so the few that didn't stand out clearly (not just by a faint tint).
+            string bg = pressed ? "AccentFillColorDefaultBrush" : done ? "SystemFillColorSuccessBrush" : "ControlFillColorDefaultBrush";
             string stroke = done && !pressed ? "SystemFillColorSuccessBrush" : "ControlStrongStrokeColorDefaultBrush";
             b.SetResourceReference(Border.BackgroundProperty, bg);
             b.SetResourceReference(Border.BorderBrushProperty, stroke);
-            ((TextBlock)b.Child).SetResourceReference(TextBlock.ForegroundProperty, pressed ? "TextOnAccentFillColorPrimaryBrush" : "TextFillColorPrimaryBrush");
+            ((TextBlock)b.Child).SetResourceReference(TextBlock.ForegroundProperty, pressed || done ? "TextOnAccentFillColorPrimaryBrush" : "TextFillColorPrimaryBrush");
         }
     }
 
@@ -165,8 +198,9 @@ public partial class KeyboardStep : StepView
 
     private async Task FinishSoonAsync()
     {
+        var judge = Ctx.JudgeCurrentStep();   // not whatever step is showing in 2 s
         await Task.Delay(TimeSpan.FromSeconds(2));
-        Ctx.Judge(TestOutcome.Pass);
+        judge(TestOutcome.Pass);
     }
 
     private List<string> MissingNames() =>
@@ -197,6 +231,7 @@ public partial class KeyboardStep : StepView
 
     public override void Cleanup()
     {
+        if (_hook is not null) _hook.Key -= OnKey;
         _hook?.Dispose();
         _hook = null;
     }

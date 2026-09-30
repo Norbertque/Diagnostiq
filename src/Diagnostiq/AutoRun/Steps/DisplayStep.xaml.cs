@@ -30,9 +30,11 @@ public partial class DisplayStep : StepView
     private void Start_Click(object sender, RoutedEventArgs e)
     {
         Ctx.Window.SetFullBleed(true);
-        Ctx.Window.PreviewKeyDown += OnKey;
+        // handledEventsToo: the window itself marks Esc handled (so it never ends the run), but here it ends the colours.
+        Ctx.Window.AddHandler(PreviewKeyDownEvent, (KeyEventHandler)OnKey, handledEventsToo: true);
         ColorLayer.Visibility = Visibility.Visible;
         Intro.Visibility = Visibility.Collapsed;
+        ColorLayer.Focus();   // the focused Start button is hidden now; keep keys coming to this window
         _index = -1;
         Next();
     }
@@ -67,13 +69,14 @@ public partial class DisplayStep : StepView
 
     private void Finish()
     {
-        Ctx.Window.PreviewKeyDown -= OnKey;
+        Ctx.Window.RemoveHandler(PreviewKeyDownEvent, (KeyEventHandler)OnKey);
         Ctx.Window.SetFullBleed(false);
         ColorLayer.Visibility = Visibility.Collapsed;
         Intro.Visibility = Visibility.Visible;
         Question.Visibility = Visibility.Visible;
         StartButton.Content = "Show again";
         StartButton.Appearance = Wpf.Ui.Controls.ControlAppearance.Secondary;
+        StartButton.Focus();   // keyboard users continue from here; Tab reaches Pass and Fail
     }
 
     protected override string? Detail(TestOutcome outcome) => outcome switch
@@ -85,6 +88,8 @@ public partial class DisplayStep : StepView
 
     public override void Cleanup()
     {
-        if (ColorLayer.Visibility == Visibility.Visible) Finish();
+        if (ColorLayer.Visibility != Visibility.Visible) return;
+        Ctx.Window.RemoveHandler(PreviewKeyDownEvent, (KeyEventHandler)OnKey);
+        Ctx.Window.SetFullBleed(false);
     }
 }

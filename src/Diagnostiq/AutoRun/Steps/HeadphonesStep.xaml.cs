@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using Diagnostiq.Core;
 using Diagnostiq.Core.Audio;
@@ -38,8 +39,10 @@ public partial class HeadphonesStep : StepView
 
     private void Check()
     {
-        if (_detected) return;
-        var output = AudioDevices.DefaultOutput();
+        if (_detected || _devices is null) return;   // already found, or a notification queued before the step ended
+        OutputDevice? output;
+        try { output = AudioDevices.DefaultOutput(); }
+        catch (COMException) { return; }   // the endpoint is mid-change; the next notification tries again
         if (output is not { IsHeadphones: true }) return;
         _detected = true;
         JackIcon.State = CheckState.Pass;

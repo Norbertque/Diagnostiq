@@ -66,21 +66,30 @@ public partial class SpeakersStep : StepView
     public override void Cleanup()
     {
         _player.Stop();
-        if (_originalVolume is { } v) AudioDevices.RestoreDefaultOutputVolume(v);
+        if (_originalVolume is not { } v) return;
+        try { AudioDevices.RestoreDefaultOutputVolume(v); }
+        catch (System.Runtime.InteropServices.COMException) { }   // the device is gone: nothing to restore
     }
 }
 
-/// <summary>Plays one sound at a time; a new request stops the current one. Highlights the button that's playing.</summary>
+/// <summary>
+/// Plays one sound at a time; a new request stops the current one. Highlights the button that's playing.
+/// <see cref="Stop"/> is final, so a queued sequence (left, right, sweep) can't carry on into the next step.
+/// </summary>
 public sealed class AudioPlayerQueue
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private CancellationTokenSource? _current;
+    private volatile bool _stopped;
 
     public async Task PlayAsync(System.Windows.Threading.Dispatcher ui, Button button, Func<CancellationToken, Task> sound)
     {
+        if (_stopped) return;
         _current?.Cancel();
         await _gate.WaitAsync().ConfigureAwait(false);
+        if (_stopped) { _gate.Release(); return; }
         var cts = _current = new CancellationTokenSource();
+        if (_stopped) cts.Cancel();   // Stop() ran between the check and taking over _current
         try
         {
             await ui.InvokeAsync(() => button.Appearance = ControlAppearance.Primary);
@@ -95,5 +104,9 @@ public sealed class AudioPlayerQueue
         }
     }
 
-    public void Stop() => _current?.Cancel();
+    public void Stop()
+    {
+        _stopped = true;
+        _current?.Cancel();
+    }
 }

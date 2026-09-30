@@ -4,45 +4,50 @@
                xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                xmlns:auto="clr-namespace:Diagnostiq.AutoRun"
                xmlns:c="clr-namespace:Diagnostiq.Controls">
-    <StackPanel MaxWidth="880" Margin="48" VerticalAlignment="Center">
-        <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Microphone" AutomationProperties.HeadingLevel="Level1" />
-        <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,6,0,8"
-                   Text="Say something or tap near the microphone: the bar should jump. Then record a few seconds and listen back." />
-        <TextBlock x:Name="DeviceText" Style="{StaticResource Diag.Text.Caption}" Margin="0,0,0,20" />
+    <Grid MaxWidth="1240" Margin="48,32,48,32">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MaxWidth="880" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+            <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Microphone" AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock Style="{StaticResource Diag.Text.Instruction}" Margin="0,6,0,8"
+                       Text="Say something or tap near the microphone: the bar should jump. Then record a few seconds and listen back." />
+            <TextBlock x:Name="DeviceText" Style="{StaticResource Diag.Text.Caption}" Margin="0,0,0,20" />
 
-        <!-- Level meter: width follows the live peak. -->
-        <Border Height="24" CornerRadius="12" Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                BorderBrush="{DynamicResource ControlStrongStrokeColorDefaultBrush}" BorderThickness="1" ClipToBounds="True"
-                AutomationProperties.Name="Microphone level">
-            <Border x:Name="LevelFill" HorizontalAlignment="Left" Width="0" CornerRadius="12" Background="{DynamicResource AccentFillColorDefaultBrush}" />
-        </Border>
+            <!-- Level meter: width follows the live peak. -->
+            <Border Height="24" CornerRadius="12" Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                    BorderBrush="{DynamicResource ControlStrongStrokeColorDefaultBrush}" BorderThickness="1" ClipToBounds="True"
+                    AutomationProperties.Name="Microphone level">
+                <Border x:Name="LevelFill" HorizontalAlignment="Left" Width="0" CornerRadius="12" Background="{DynamicResource AccentFillColorDefaultBrush}" />
+            </Border>
 
-        <Border Style="{StaticResource Diag.Card}" Padding="20,4" Margin="0,20,0,0">
-            <StackPanel>
-                <Grid Margin="0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="220" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <c:StatusIcon x:Name="HearsIcon" Margin="0,0,12,0" VerticalAlignment="Top" />
-                    <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.BodyStrong}" Text="Picks up sound" />
-                    <TextBlock Grid.Column="2" x:Name="HearsText" Style="{StaticResource Diag.Text.Body}" Text="Listening…" />
-                </Grid>
-                <Grid Margin="0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="220" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <c:StatusIcon x:Name="RecordIcon" Margin="0,0,12,0" VerticalAlignment="Top" />
-                    <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.BodyStrong}" Text="Recording plays back" />
-                    <TextBlock Grid.Column="2" x:Name="RecordText" Style="{StaticResource Diag.Text.Body}" Text="Not recorded yet." />
-                </Grid>
-            </StackPanel>
-        </Border>
+            <Border Style="{StaticResource Diag.Card}" Padding="20,4" Margin="0,20,0,0">
+                <StackPanel>
+                    <Grid Margin="0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="220" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <c:StatusIcon x:Name="HearsIcon" Margin="0,0,12,0" VerticalAlignment="Top" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.BodyStrong}" Text="Picks up sound" />
+                        <TextBlock Grid.Column="2" x:Name="HearsText" Style="{StaticResource Diag.Text.Body}" Text="Listening…" />
+                    </Grid>
+                    <Grid Margin="0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="220" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <c:StatusIcon x:Name="RecordIcon" Margin="0,0,12,0" VerticalAlignment="Top" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.BodyStrong}" Text="Recording plays back" />
+                        <TextBlock Grid.Column="2" x:Name="RecordText" Style="{StaticResource Diag.Text.Body}" Text="Not recorded yet." />
+                    </Grid>
+                </StackPanel>
+            </Border>
 
-        <ui:Button x:Name="RecordButton" Content="Record 3 seconds" Icon="{ui:SymbolIcon Mic24}" Appearance="Primary"
-                   MinHeight="40" Padding="16,8" Margin="0,20,0,0" Focusable="False" Click="Record_Click" />
-    </StackPanel>
+            <ui:Button x:Name="RecordButton" Content="Record 3 seconds" Icon="{ui:SymbolIcon Mic24}" Appearance="Primary"
+                       MinHeight="40" Padding="16,8" Margin="0,20,0,0" Click="Record_Click" />
+        </StackPanel>
+    </Grid>
 </auto:StepView>

@@ -11,7 +11,7 @@
         </Grid.RowDefinitions>
         <StackPanel>
             <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Camera" AutomationProperties.HeadingLevel="Level1" />
-            <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,6,0,4"
+            <TextBlock Style="{StaticResource Diag.Text.Instruction}" Margin="0,6,0,4" MaxWidth="880" HorizontalAlignment="Left"
                        Text="The picture should be sharp, with natural colours and no dark spots or lines. If it stays black, open the camera's privacy shutter or check for a camera key." />
             <TextBlock x:Name="DeviceText" Style="{StaticResource Diag.Text.Caption}" />
         </StackPanel>
@@ -30,7 +30,7 @@
 
         <StackPanel Grid.Row="2" Orientation="Horizontal">
             <ui:Button x:Name="SwitchButton" Content="Switch camera" Icon="{ui:SymbolIcon ArrowSync24}" Visibility="Collapsed"
-                       Focusable="False" Click="Switch_Click" />
+                       Click="Switch_Click" />
         </StackPanel>
     </Grid>
 </auto:StepView>

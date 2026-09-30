@@ -3,35 +3,40 @@
                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                xmlns:auto="clr-namespace:Diagnostiq.AutoRun"
                xmlns:c="clr-namespace:Diagnostiq.Controls">
-    <StackPanel MaxWidth="880" Margin="48" VerticalAlignment="Center">
-        <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Charger" AutomationProperties.HeadingLevel="Level1" />
-        <TextBlock x:Name="Instruction" Style="{StaticResource Diag.Text.Subtitle}" Margin="0,12,0,24" />
+    <Grid MaxWidth="1240" Margin="48,32,48,32">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MaxWidth="880" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+            <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Charger" AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock x:Name="Instruction" Style="{StaticResource Diag.Text.Subtitle}" Margin="0,12,0,24" />
 
-        <Border Style="{StaticResource Diag.Card}" Padding="20,4">
-            <StackPanel>
-                <Grid Margin="0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="220" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <c:StatusIcon x:Name="UnplugIcon" Margin="0,0,12,0" VerticalAlignment="Top" />
-                    <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.BodyStrong}" Text="Unplugged" />
-                    <TextBlock Grid.Column="2" x:Name="UnplugText" Style="{StaticResource Diag.Text.Body}" />
-                </Grid>
-                <Grid Margin="0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="220" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <c:StatusIcon x:Name="PlugIcon" Margin="0,0,12,0" VerticalAlignment="Top" />
-                    <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.BodyStrong}" Text="Plugged in and charging" />
-                    <TextBlock Grid.Column="2" x:Name="PlugText" Style="{StaticResource Diag.Text.Body}" />
-                </Grid>
-            </StackPanel>
-        </Border>
-        <TextBlock x:Name="Note" Style="{StaticResource Diag.Text.Caption}" Margin="0,12,0,0"
-                   Text="A loose connector or worn cable often shows up here: wiggle the plug gently while it's in." />
-    </StackPanel>
+            <Border Style="{StaticResource Diag.Card}" Padding="20,4">
+                <StackPanel>
+                    <Grid Margin="0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="220" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <c:StatusIcon x:Name="UnplugIcon" Margin="0,0,12,0" VerticalAlignment="Top" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.BodyStrong}" Text="Unplugged" />
+                        <TextBlock Grid.Column="2" x:Name="UnplugText" Style="{StaticResource Diag.Text.Body}" />
+                    </Grid>
+                    <Grid Margin="0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="220" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <c:StatusIcon x:Name="PlugIcon" Margin="0,0,12,0" VerticalAlignment="Top" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.BodyStrong}" Text="Plugged in and charging" />
+                        <TextBlock Grid.Column="2" x:Name="PlugText" Style="{StaticResource Diag.Text.Body}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+            <TextBlock x:Name="Note" Style="{StaticResource Diag.Text.Caption}" Margin="0,12,0,0"
+                       Text="A loose connector or worn cable often shows up here: wiggle the plug gently while it's in." />
+        </StackPanel>
+    </Grid>
 </auto:StepView>

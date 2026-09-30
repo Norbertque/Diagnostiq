@@ -3,33 +3,39 @@
                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                xmlns:auto="clr-namespace:Diagnostiq.AutoRun"
                xmlns:c="clr-namespace:Diagnostiq.Controls">
-    <StackPanel MaxWidth="760" Margin="48,48,48,32" VerticalAlignment="Center">
-        <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Quick checks" AutomationProperties.HeadingLevel="Level1" />
-        <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,6,0,24"
-                   Text="Checking the internet connection and scanning for Wi-Fi networks. The stress test starts right after." />
-        <Border Style="{StaticResource Diag.Card}" Padding="20,8">
-            <StackPanel>
-                <Grid Margin="0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="200" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <c:StatusIcon x:Name="InternetIcon" VerticalAlignment="Top" Margin="0,0,12,0" />
-                    <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.BodyStrong}" Text="Internet connection" />
-                    <TextBlock Grid.Column="2" x:Name="InternetText" Style="{StaticResource Diag.Text.Body}" Text="Checking…" />
-                </Grid>
-                <Grid Margin="0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="200" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <c:StatusIcon x:Name="WifiIcon" VerticalAlignment="Top" Margin="0,0,12,0" />
-                    <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.BodyStrong}" Text="Wi-Fi scan" />
-                    <TextBlock Grid.Column="2" x:Name="WifiText" Style="{StaticResource Diag.Text.Body}" Text="Scanning…" />
-                </Grid>
-            </StackPanel>
-        </Border>
-    </StackPanel>
+    <!-- Same frame as the wide slides (1240, top-left), so the heading doesn't move between steps. -->
+    <Grid MaxWidth="1240" Margin="48,32,48,32">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MaxWidth="880" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+            <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Wi-Fi and internet" AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock Style="{StaticResource Diag.Text.Instruction}" Margin="0,6,0,24"
+                       Text="Checking the internet connection and scanning for Wi-Fi networks. This takes a few seconds." />
+            <Border Style="{StaticResource Diag.Card}" Padding="20,8">
+                <StackPanel>
+                    <Grid Margin="0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="200" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <c:StatusIcon x:Name="InternetIcon" VerticalAlignment="Top" Margin="0,0,12,0" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.BodyStrong}" Text="Internet connection" />
+                        <TextBlock Grid.Column="2" x:Name="InternetText" Style="{StaticResource Diag.Text.Body}" Text="Checking…" />
+                    </Grid>
+                    <Grid Margin="0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="200" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <c:StatusIcon x:Name="WifiIcon" VerticalAlignment="Top" Margin="0,0,12,0" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.BodyStrong}" Text="Wi-Fi scan" />
+                        <TextBlock Grid.Column="2" x:Name="WifiText" Style="{StaticResource Diag.Text.Body}" Text="Scanning…" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
 </auto:StepView>

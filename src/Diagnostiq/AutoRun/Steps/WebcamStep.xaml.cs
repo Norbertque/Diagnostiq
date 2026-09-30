@@ -96,6 +96,7 @@ public partial class WebcamStep : StepView
             image.Freeze();
             Dispatcher.BeginInvoke(() =>
             {
+                if (_device is null) return;   // queued before the step ended: leave the next step's top bar alone
                 Preview.Source = image;
                 if (Overlay.Visibility == Visibility.Visible) { Overlay.Visibility = Visibility.Collapsed; Ctx.Suggest(null); }
             });
