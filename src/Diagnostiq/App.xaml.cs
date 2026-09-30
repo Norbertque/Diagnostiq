@@ -38,19 +38,27 @@ public partial class App : Application
         window.Start();
     }
 
+    /// <summary>Where unexpected errors are written, for support.</summary>
+    public static string ErrorLogPath => Path.Combine(Path.GetTempPath(), "Diagnostiq", "errors.log");
+
+    /// <summary>Appends an unexpected error to <see cref="ErrorLogPath"/>; never throws.</summary>
+    public static void LogError(Exception ex)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(ErrorLogPath)!);
+            File.AppendAllText(ErrorLogPath, $"{DateTime.Now:O}\n{ex}\n\n");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+    }
+
     /// <summary>Last resort: log, tell the user, keep running (a failed view shouldn't kill a 15-minute test).</summary>
     private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         Interop.KeyboardHook.ReleaseAll();   // never leave the keyboard captured after an error
-        try
-        {
-            var dir = Path.Combine(Path.GetTempPath(), "Diagnostiq");
-            Directory.CreateDirectory(dir);
-            File.AppendAllText(Path.Combine(dir, "errors.log"), $"{DateTime.Now:O}\n{e.Exception}\n\n");
-        }
-        catch (IOException) { }
+        LogError(e.Exception);
 
-        System.Windows.MessageBox.Show($"Something went wrong:\n\n{e.Exception.Message}\n\nThe app will keep running.",
+        System.Windows.MessageBox.Show($"Something went wrong: {e.Exception.Message}\n\nThe app will keep running. Details were saved to {ErrorLogPath}.",
             "Diagnostiq", MessageBoxButton.OK, MessageBoxImage.Warning);
         e.Handled = true;
     }

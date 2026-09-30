@@ -38,6 +38,11 @@
     <Style x:Key="Diag.Text.BodyStrong" TargetType="TextBlock" BasedOn="{StaticResource Diag.Text.Body}">
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
+    <!-- Automatic-run slides: the instruction must be readable by someone standing at the laptop. -->
+    <Style x:Key="Diag.Text.Instruction" TargetType="TextBlock" BasedOn="{StaticResource Diag.Text.Body}">
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="LineHeight" Value="26" />
+    </Style>
     <Style x:Key="Diag.Text.Subtitle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource Diag.Font.Display}" />
         <Setter Property="FontSize" Value="{StaticResource Diag.Size.Subtitle}" />
@@ -81,6 +86,8 @@
     <sys:Double x:Key="Diag.Space.8">64</sys:Double>
     <Thickness x:Key="Diag.Pad.Card">20</Thickness>
     <Thickness x:Key="Diag.Pad.Page">32,24,32,32</Thickness>
+    <!-- Manual pages share one content width so the title doesn't shift between pages. -->
+    <sys:Double x:Key="Diag.Page.MaxWidth">1000</sys:Double>
     <Thickness x:Key="Diag.Gap.Stack">0,0,0,12</Thickness>
     <Thickness x:Key="Diag.Gap.Section">0,24,0,12</Thickness>
 
