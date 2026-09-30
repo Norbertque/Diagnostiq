@@ -12,3 +12,6 @@ Reports/
 
 # Inventory spreadsheets are data, not code
 *.xlsx
+
+# Agent worktrees (temporary)
+.claude/worktrees/
