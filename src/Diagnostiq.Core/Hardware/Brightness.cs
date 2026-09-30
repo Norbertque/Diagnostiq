@@ -17,13 +17,37 @@ public static class BrightnessControl
             return Wmi.Query("SELECT CurrentBrightness, Active FROM WmiMonitorBrightness", Wmi.RootWmi)
                 .FirstOrDefault(m => m.Bool("Active") != false)?.Int("CurrentBrightness");
         }
-        catch (ManagementException) { return null; }
+        catch (Exception ex) when (IsWmiError(ex)) { return null; }
     }
 
-    public static void Set(int percent)
+    /// <summary>
+    /// Sets every active panel (hybrid-graphics laptops also list an inactive one). Never throws:
+    /// firmware can refuse with "Generic failure".
+    /// </summary>
+    /// <returns>True when at least one panel took the new level.</returns>
+    public static bool Set(int percent)
     {
         byte level = (byte)Math.Clamp(percent, 0, 100);
-        foreach (var m in Wmi.Query("SELECT * FROM WmiMonitorBrightnessMethods", Wmi.RootWmi).OfType<ManagementObject>())
-            m.InvokeMethod("WmiSetBrightness", [(uint)1, level]);   // timeout (s), level
+        List<ManagementObject> panels;
+        try
+        {
+            panels = Wmi.Query("SELECT * FROM WmiMonitorBrightnessMethods", Wmi.RootWmi).OfType<ManagementObject>()
+                .Where(m => m.Bool("Active") != false).ToList();
+        }
+        catch (Exception ex) when (IsWmiError(ex)) { return false; }
+
+        bool set = false;
+        foreach (var m in panels)
+        {
+            try
+            {
+                m.InvokeMethod("WmiSetBrightness", [(uint)1, level]);   // timeout (s), level
+                set = true;
+            }
+            catch (Exception ex) when (IsWmiError(ex)) { }
+        }
+        return set;
     }
+
+    private static bool IsWmiError(Exception ex) => ex is ManagementException or System.Runtime.InteropServices.COMException;
 }

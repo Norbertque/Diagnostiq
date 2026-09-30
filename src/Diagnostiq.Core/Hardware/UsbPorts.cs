@@ -12,9 +12,7 @@ public sealed record UsbArrival(string InstanceId, string Name, string Port, boo
 /// </summary>
 public sealed partial class UsbPortWatcher : IDisposable
 {
-    private readonly HashSet<string> _baseline;
-    private readonly HashSet<string> _seen = [];
-    private readonly HashSet<string> _ports = [];
+    private readonly UsbPortTracker _tracker;
     private readonly Timer _timer;
     private int _busy;
 
@@ -23,24 +21,18 @@ public sealed partial class UsbPortWatcher : IDisposable
 
     public UsbPortWatcher()
     {
-        _baseline = [.. PresentDevices().Select(d => d.InstanceId)];   // webcam, Bluetooth, fingerprint reader…
+        _tracker = new UsbPortTracker(PresentDevices());   // webcam, Bluetooth, fingerprint reader…
         _timer = new Timer(_ => Poll(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
-    public int PortCount { get { lock (_ports) return _ports.Count; } }
+    public int PortCount => _tracker.PortCount;
 
     private void Poll()
     {
         if (Interlocked.Exchange(ref _busy, 1) == 1) return;
         try
         {
-            foreach (var d in PresentDevices())
-            {
-                if (_baseline.Contains(d.InstanceId) || !_seen.Add(d.InstanceId) || d.Port is null) continue;
-                bool isNew;
-                lock (_ports) isNew = _ports.Add(d.Port);
-                Arrived?.Invoke(new UsbArrival(d.InstanceId, d.Name, d.Port, isNew));
-            }
+            foreach (var arrival in _tracker.Update(PresentDevices())) Arrived?.Invoke(arrival);
         }
         finally { Volatile.Write(ref _busy, 0); }
     }
@@ -123,4 +115,42 @@ public sealed partial class UsbPortWatcher : IDisposable
     private static partial bool SetupDiDestroyDeviceInfoList(nint set);
 
     public void Dispose() => _timer.Dispose();
+}
+
+/// <summary>
+/// The bookkeeping behind <see cref="UsbPortWatcher"/>, apart from SetupAPI so it can be tested.
+/// A device counts once per port: USB sticks with a serial number keep the same instance id in
+/// every port, and the step asks the user to move the same stick from port to port.
+/// </summary>
+internal sealed class UsbPortTracker
+{
+    private readonly HashSet<string> _baseline;   // plugged in before the step: counts only after a replug
+    private readonly HashSet<string> _seen = [];
+    private readonly HashSet<string> _ports = [];
+
+    public UsbPortTracker(IEnumerable<(string InstanceId, string Name, string? Port)> atStart) =>
+        _baseline = [.. atStart.Select(Key)];
+
+    public int PortCount { get { lock (_ports) return _ports.Count; } }
+
+    /// <summary>Takes the devices present at one poll and returns what arrived since the last one.</summary>
+    public List<UsbArrival> Update(IReadOnlyCollection<(string InstanceId, string Name, string? Port)> present)
+    {
+        // Forget unplugged devices, so plugging one back in, in this port or another, counts again.
+        var keys = present.Select(Key).ToHashSet();
+        _baseline.IntersectWith(keys);
+        _seen.IntersectWith(keys);
+
+        var arrivals = new List<UsbArrival>();
+        foreach (var d in present)
+        {
+            if (d.Port is null || _baseline.Contains(Key(d)) || !_seen.Add(Key(d))) continue;
+            bool isNew;
+            lock (_ports) isNew = _ports.Add(d.Port);
+            arrivals.Add(new UsbArrival(d.InstanceId, d.Name, d.Port, isNew));
+        }
+        return arrivals;
+    }
+
+    private static string Key((string InstanceId, string Name, string? Port) d) => $"{d.InstanceId}|{d.Port}";
 }

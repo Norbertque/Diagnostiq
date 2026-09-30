@@ -29,13 +29,19 @@ public static class TestIds
     public const string Charger = "charger";
 }
 
-/// <summary>Everything one Automatic or Manual session measured. Re-running a test replaces its result.</summary>
+/// <summary>
+/// Everything one Automatic or Manual session measured. Re-running a test replaces its result,
+/// except that skipping a re-run keeps the earlier real result (a skipped Keyboard step mustn't
+/// erase the dead keys found before).
+/// </summary>
 public sealed class TestRun
 {
     private readonly List<TestResult> _results = [];
     private readonly object _lock = new();
 
     public DateTimeOffset Started { get; } = DateTimeOffset.Now;
+
+    /// <summary>The latest burn-in; set it through <see cref="RecordStress"/> so a stopped run doesn't replace a complete one.</summary>
     public StressReport? Stress { get; set; }
     public DiskBenchmarkResult? Benchmark { get; set; }
     public PingResult? Ping { get; set; }
@@ -53,23 +59,35 @@ public sealed class TestRun
         get { lock (_lock) return _results.FirstOrDefault(r => r.Id == id); }
     }
 
-    /// <summary>Takes over another run's results and measurements (an Automatic run joining the session).</summary>
+    /// <summary>
+    /// Takes over another run's results and measurements (an Automatic run joining the session).
+    /// Steps skipped in the other run keep this run's earlier results.
+    /// </summary>
     public void MergeFrom(TestRun other)
     {
         foreach (var r in other.Results) Record(r);
-        Stress = other.Stress ?? Stress;
+        if (other.Stress is { } stress) RecordStress(stress);
         Benchmark = other.Benchmark ?? Benchmark;
         Ping = other.Ping ?? Ping;
         WifiScan = other.WifiScan ?? WifiScan;
     }
 
+    /// <summary>Adds or replaces the result for its id. A Skipped result never replaces a real one; it's ignored.</summary>
     public void Record(TestResult result)
     {
         lock (_lock)
         {
             int i = _results.FindIndex(r => r.Id == result.Id);
-            if (i >= 0) _results[i] = result; else _results.Add(result);
+            if (i < 0) _results.Add(result);
+            else if (result.Outcome != TestOutcome.Skipped || _results[i].Outcome == TestOutcome.Skipped) _results[i] = result;
+            else return;
         }
         Recorded?.Invoke(result);
+    }
+
+    /// <summary>Keeps <paramref name="report"/> unless it was stopped early and a complete run is already recorded.</summary>
+    public void RecordStress(StressReport report)
+    {
+        if (!report.Cancelled || Stress is null or { Cancelled: true }) Stress = report;
     }
 }

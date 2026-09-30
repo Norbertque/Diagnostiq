@@ -24,8 +24,8 @@ public sealed record CpuSupportResult(CpuSupport Support, string Family);
 /// </summary>
 public static partial class SupportedCpus
 {
-    /// <summary>When the lists were last updated by Microsoft / retrieved for this build.</summary>
-    public const string ListDate = "Microsoft lists updated October 2025, checked September 2026";
+    /// <summary>When the lists were last updated by Microsoft / reviewed for this build. Reads on after "checked against".</summary>
+    public const string ListDate = "Microsoft's lists (updated October 2025, last reviewed September 2026)";
 
     private static readonly Lazy<HashSet<string>> AmdModels = new(LoadAmdModels);
 

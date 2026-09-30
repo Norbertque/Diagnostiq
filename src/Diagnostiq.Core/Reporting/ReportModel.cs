@@ -16,7 +16,11 @@ public sealed record ReportSection(string Title, IReadOnlyList<ReportRow> Rows);
 public sealed record ReportDevice(string Name, string? Vendor, string? Model, string? ModelNumber, string SerialLabel, string? Serial,
     string? Bios, string? BiosDate);
 
-public sealed record ReportHealth(int Score, string Verdict, IReadOnlyList<Deduction> Deductions, IReadOnlyList<string> Skipped, IReadOnlyList<string> NotTested);
+public sealed record ReportHealth(int Score, string Verdict, IReadOnlyList<Deduction> Deductions, IReadOnlyList<string> Skipped, IReadOnlyList<string> NotTested)
+{
+    /// <summary>See <see cref="HealthReport.NothingTested"/>.</summary>
+    public bool NothingTested { get; init; }
+}
 
 public sealed record ReportWin11Check(string Title, string State, string Detail, string? Hint);
 
@@ -55,7 +59,7 @@ public sealed record ReportModel(
             Device: new ReportDevice(d?.DisplayName ?? "Unknown computer", d?.Vendor, d?.Model, d?.ModelNumber, d?.SerialLabel ?? "Serial number",
                 d?.Serial, id?.BiosVersion, id?.BiosDate is { } bd ? Format.Date(bd) : null),
             Health: new ReportHealth(health.Score, HealthScore.Label(health.Verdict), health.Deductions,
-                health.Skipped.Select(r => r.Title).ToList(), health.NotTested),
+                health.Skipped.Select(r => r.Title).ToList(), health.NotTested) { NothingTested = health.NothingTested },
             Windows11: new ReportWin11(Win11Label(s.Win11.Verdict), s.Win11.RunningWindows11,
                 s.Win11.Checks.Select(c => new ReportWin11Check(c.Title, c.State.ToString(), c.Detail, c.Hint)).ToList()),
             Tests: run.Results.Select(r => new ReportTest(r.Id, r.Title, r.Outcome.ToString(), r.Detail)).ToList(),
@@ -156,8 +160,15 @@ public sealed record ReportModel(
 
         Row("Windows", os is null ? null : Format.Join(os.Name, os.DisplayVersion, $"build {os.BuildString}"));
         Row("Installed", os?.InstallDate is { } d ? Format.Date(d) : null);
-        Row("Activation", act is null ? null : act.IsActivated ? $"Activated ({act.Channel ?? "unknown licence"})" : "Not activated",
-            act is null ? null : act.IsActivated ? "Pass" : "Warn");
+        (string? Value, string? Status) activation = act?.State switch
+        {
+            null => (null, null),
+            LicenseState.Licensed => ($"Activated ({act.Channel ?? "unknown licence"})", "Pass"),
+            // The licensing service didn't answer (it can be slow to start); that isn't a missing licence.
+            LicenseState.Unknown => ("Couldn't check", null),
+            _ => ("Not activated", "Warn"),
+        };
+        Row("Activation", activation.Value, activation.Status);
         Row("Key in BIOS", act?.HasFirmwareKey == true ? $"Windows {act.FirmwareKeyEdition}" : act is null ? null : "None");
         Row("TPM", s.Tpm.Value switch { { Present: false } => "Not found", { MajorVersion: { } v } => $"TPM {v:0.0}", _ => null });
         Row("Secure Boot", s.Firmware.Value?.SecureBoot switch

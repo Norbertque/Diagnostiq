@@ -105,17 +105,17 @@ public static class Win11Readiness
 
     private static Win11Check Tpm(Win11Inputs x, string setup)
     {
-        const string title = "TPM 2.0";
+        const string title = "TPM 2.0 security chip";
         var where = x.Hints?.TpmLocation ?? "Security or Advanced: TPM, Intel PTT or AMD fTPM";
         if (x.Tpm is not { } t) return new("tpm", title, CheckState.Unknown, "Couldn't read the TPM.");
         if (!t.Present)
-            return new("tpm", title, CheckState.Fail, "Windows sees no TPM. Most laptops from 2016 on have one that may be switched off.",
+            return new("tpm", title, CheckState.Fail, "Windows sees no TPM security chip. Most laptops from 2016 on have one; it may be switched off.",
                 FixKind.BiosSetting, $"In {setup}: {where}");
         if (t.Enabled == false || t.Activated == false)
             return new("tpm", title, CheckState.Fail, "TPM is present but switched off.", FixKind.BiosSetting, $"In {setup}: {where}");
         return t.MajorVersion switch
         {
-            >= 2.0 => new("tpm", title, CheckState.Pass, t.Manufacturer is { } m ? $"TPM 2.0 ({m})." : "TPM 2.0."),
+            >= 2.0 => new("tpm", title, CheckState.Pass, t.Manufacturer is { } m ? $"TPM 2.0 ({m}), switched on." : "TPM 2.0, switched on."),
             { } v => new("tpm", title, CheckState.Fail, $"TPM {v:0.0} only.", FixKind.Hardware,
                 "Some business laptops (Dell, HP, Lenovo) can switch TPM 1.2 to 2.0 with a firmware update from the vendor."),
             null => new("tpm", title, CheckState.Unknown, "A TPM is present but its version couldn't be read."),
@@ -125,7 +125,8 @@ public static class Win11Readiness
     private static Win11Check Uefi(Win11Inputs x, string setup) => x.Firmware?.Uefi switch
     {
         true => new("uefi", "UEFI boot", CheckState.Pass, "Booted in UEFI mode."),
-        false => new("uefi", "UEFI boot", CheckState.Fail, "Booted in Legacy BIOS (CSM) mode.", FixKind.BiosSetting,
+        false => new("uefi", "UEFI boot", CheckState.Fail,
+            "Starts in the older Legacy BIOS (CSM) mode; Windows 11 needs UEFI, the modern startup mode.", FixKind.BiosSetting,
             $"First convert the Windows disk to GPT (mbr2gpt /convert /allowFullOS), or Windows won't start. Then set Boot mode to UEFI in {setup}."),
         null => new("uefi", "UEFI boot", CheckState.Unknown, "Couldn't read the firmware type."),
     };

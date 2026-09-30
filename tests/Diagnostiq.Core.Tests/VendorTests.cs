@@ -80,4 +80,14 @@ public class VendorTests
 
     [Fact]
     public void Acer_notes_supervisor_password() => Assert.NotNull(N("Acer", "Aspire A515-54").Hints.Note);
+
+    [Fact]
+    public void Surface_keys_read_after_press_and_the_note_explains_the_hold()
+    {
+        // The UI says "Press {SetupKey} while the laptop starts. Boot menu: {BootMenuKey}."
+        var h = N("Microsoft Corporation", "Surface Laptop 4").Hints;
+        Assert.Equal("Volume Up + Power", h.SetupKey);
+        Assert.Equal("Volume Down + Power", h.BootMenuKey);
+        Assert.Contains("hold the volume button", h.Note);
+    }
 }

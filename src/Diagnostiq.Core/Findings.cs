@@ -4,7 +4,11 @@ using Diagnostiq.Core.Storage;
 namespace Diagnostiq.Core;
 
 /// <param name="Area">Short category shown next to the text ("Storage", "Battery", …).</param>
-public sealed record Finding(CheckState State, string Area, string Text);
+public sealed record Finding(CheckState State, string Area, string Text)
+{
+    /// <summary>What screen readers announce for a list item bound to this record.</summary>
+    public override string ToString() => $"{Area}: {Text}";
+}
 
 /// <summary>
 /// Things worth a look that the startup snapshot already reveals, before any test runs.
@@ -29,8 +33,8 @@ public static class Findings
 
         if (s.Battery.Value is { Present: true, HealthPercent: { } health })
         {
-            if (health < 40) list.Add(new(CheckState.Fail, "Battery", $"Battery holds only {health:0}% of its original charge. Replace it."));
-            else if (health < 60) list.Add(new(CheckState.Warn, "Battery", $"Battery holds {health:0}% of its original charge."));
+            if (health < 40) list.Add(new(CheckState.Fail, "Battery", $"Battery holds only {health:0}% of its original capacity. Replace it."));
+            else if (health < 60) list.Add(new(CheckState.Warn, "Battery", $"Battery holds {health:0}% of its original capacity."));
         }
 
         if (s.Gpus.Value?.Any(g => g.IsBasicDisplayDriver) == true)
@@ -49,7 +53,7 @@ public static class Findings
         else if (s.Wifi.IsOk && s.Wifi.Value is { AdapterPresent: false } && s.Battery.Value?.Present == true)
             list.Add(new(CheckState.Warn, "Wi-Fi", "No Wi-Fi adapter found. It may be off in BIOS or missing a driver."));
 
-        if (s.Activation.Value is { IsActivated: false } act)
+        if (s.Activation.Value is { IsActivated: false, State: not LicenseState.Unknown } act)
             list.Add(new(CheckState.Warn, "Windows", act.HasFirmwareKey
                 ? $"Windows isn't activated. The BIOS holds a Windows {act.FirmwareKeyEdition} key; connect to the internet to activate."
                 : "Windows isn't activated."));

@@ -41,9 +41,12 @@ public static class HtmlReport
 
         // Summary: what cost points, what wasn't covered.
         h.Append("<section><h2>Summary</h2>");
-        if (m.Health.Deductions.Count == 0)
+        // Without tests a high score mustn't read as a clean bill of health.
+        if (m.Health.NothingTested)
+            h.Append("<p>No tests run yet, so this score only covers battery wear, drive health and driver problems.</p>");
+        else if (m.Health.Deductions.Count == 0)
             h.Append("<p>No problems found in the tests that were run.</p>");
-        else
+        if (m.Health.Deductions.Count > 0)
         {
             h.Append("<table class=\"list\">");
             foreach (var d in m.Health.Deductions)

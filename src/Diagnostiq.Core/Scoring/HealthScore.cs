@@ -14,6 +14,9 @@ public sealed record HealthReport(int Score, HealthVerdict Verdict, IReadOnlyLis
     IReadOnlyList<TestResult> Skipped, IReadOnlyList<string> NotTested)
 {
     public bool HasCritical => Deductions.Any(d => d.Severity == Severity.Critical);
+
+    /// <summary>No test has a result yet (none run, or all skipped): the score then only covers battery wear, drive health and driver problems.</summary>
+    public bool NothingTested { get; init; }
 }
 
 /// <summary>Facts the score needs, so <see cref="HealthScore.Compute(HealthInputs)"/> stays pure and testable.</summary>
@@ -89,13 +92,14 @@ public static class HealthScore
         switch (x.StorageHealth)
         {
             case CheckState.Fail: deductions.Add(new("Storage", x.StorageProblem ?? "The drive reports a failure.", Severity.Critical, Critical)); break;
-            case CheckState.Warn: deductions.Add(new("Storage", x.StorageProblem ?? "The drive reports a warning.", Severity.Major, Major)); break;
+            // Running hot, 80 % worn, a logged error: worth knowing, but the drive still works.
+            case CheckState.Warn: deductions.Add(new("Storage", x.StorageProblem ?? "The drive reports a warning.", Severity.Minor, Minor)); break;
         }
 
         switch (x.BatteryHealthPercent)
         {
-            case < 40 and var h: deductions.Add(new("Battery", $"Holds {h:0}% of its original charge. Replace it.", Severity.Critical, Critical)); break;
-            case < 60 and var h: deductions.Add(new("Battery", $"Holds {h:0}% of its original charge.", Severity.Major, Major)); break;
+            case < 40 and var h: deductions.Add(new("Battery", $"Holds only {h:0}% of its original capacity. Replace it.", Severity.Critical, Critical)); break;
+            case < 60 and var h: deductions.Add(new("Battery", $"Holds {h:0}% of its original capacity.", Severity.Major, Major)); break;
         }
 
         if (x.DriverProblems > 0)
@@ -111,7 +115,10 @@ public static class HealthScore
         return new HealthReport(score, verdict,
             deductions.OrderBy(d => d.Severity).ToList(),
             x.Results.Where(r => r.Outcome == TestOutcome.Skipped).ToList(),
-            Expected.Where(e => !ran.Contains(e.Id)).Select(e => e.Title).ToList());
+            Expected.Where(e => !ran.Contains(e.Id)).Select(e => e.Title).ToList())
+        {
+            NothingTested = x.Results.All(r => r.Outcome == TestOutcome.Skipped),
+        };
     }
 
     public static string Label(HealthVerdict v) => v switch
