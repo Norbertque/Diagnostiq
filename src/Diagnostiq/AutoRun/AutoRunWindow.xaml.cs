@@ -45,6 +45,8 @@ public partial class AutoRunWindow : Window
     /// <summary>Off for dev snapshots so captures don't catch a step mid-slide.</summary>
     public bool AnimationsEnabled { get; set; } = SystemParameters.ClientAreaAnimation;
 
+    public AutoRunContext Context => _ctx;
+
     /// <summary>The finished run, for Home and the report.</summary>
     public TestRun Run => _ctx.Run;
 

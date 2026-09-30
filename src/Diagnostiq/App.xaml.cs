@@ -41,6 +41,7 @@ public partial class App : Application
     /// <summary>Last resort: log, tell the user, keep running (a failed view shouldn't kill a 15-minute test).</summary>
     private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
+        Interop.KeyboardHook.ReleaseAll();   // never leave the keyboard captured after an error
         try
         {
             var dir = Path.Combine(Path.GetTempPath(), "Diagnostiq");

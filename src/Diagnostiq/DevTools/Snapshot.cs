@@ -99,6 +99,7 @@ internal static class Snapshot
                         w.Height = size.Height;
                         w.ShowActivated = false;
                         w.AnimationsEnabled = false;
+                        w.Context.CaptureInput = false;   // never grab the real keyboard while capturing
                     });
                     var wait = new DispatcherTimer { Interval = view == "auto-summary" ? TimeSpan.FromSeconds(1.5) : _delay };
                     wait.Tick += (_, _) => { wait.Stop(); Save(run, run.Stage, path); };

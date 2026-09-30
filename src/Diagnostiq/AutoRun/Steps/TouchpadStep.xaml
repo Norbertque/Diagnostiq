@@ -1,0 +1,55 @@
+<auto:StepView x:Class="Diagnostiq.AutoRun.Steps.TouchpadStep"
+               xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+               xmlns:auto="clr-namespace:Diagnostiq.AutoRun"
+               xmlns:c="clr-namespace:Diagnostiq.Controls">
+    <Grid Margin="48,32,48,32" MaxWidth="1240">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="320" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.ColumnSpan="2" Margin="0,0,0,24">
+            <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Touchpad" AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,6,0,0"
+                       Text="Use the touchpad, not a mouse. Move the pointer over the whole area until it fills in, then click both buttons (or tap with one and two fingers) and scroll up, down and sideways with two fingers." />
+        </StackPanel>
+
+        <Border x:Name="Surface" Grid.Row="1" CornerRadius="12" BorderThickness="1" Background="{DynamicResource ControlFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource ControlStrongStrokeColorDefaultBrush}" ClipToBounds="True"
+                MouseMove="Surface_MouseMove" MouseLeftButtonDown="Surface_Left" MouseRightButtonDown="Surface_Right" MouseWheel="Surface_Wheel"
+                AutomationProperties.Name="Touchpad test area">
+            <UniformGrid x:Name="Cells" />
+        </Border>
+
+        <StackPanel Grid.Row="1" Grid.Column="1" Margin="24,0,0,0">
+            <TextBlock x:Name="Coverage" Style="{StaticResource Diag.Text.Display}" Text="0%" AutomationProperties.Name="Surface covered" />
+            <TextBlock Style="{StaticResource Diag.Text.Caption}" Text="of the surface covered" Margin="0,0,0,20" />
+            <Border Style="{StaticResource Diag.Card}" Padding="16,4">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,10">
+                        <c:StatusIcon x:Name="LeftIcon" Margin="0,0,12,0" />
+                        <TextBlock Style="{StaticResource Diag.Text.Body}" Text="Left click / tap" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,10">
+                        <c:StatusIcon x:Name="RightIcon" Margin="0,0,12,0" />
+                        <TextBlock Style="{StaticResource Diag.Text.Body}" Text="Right click / two-finger tap" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,10">
+                        <c:StatusIcon x:Name="VScrollIcon" Margin="0,0,12,0" />
+                        <TextBlock Style="{StaticResource Diag.Text.Body}" Text="Scroll up and down" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,10">
+                        <c:StatusIcon x:Name="HScrollIcon" Margin="0,0,12,0" />
+                        <TextBlock Style="{StaticResource Diag.Text.Body}" Text="Scroll sideways (optional)" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            <TextBlock x:Name="Status" Style="{StaticResource Diag.Text.Body}" Margin="0,16,0,0" />
+        </StackPanel>
+    </Grid>
+</auto:StepView>

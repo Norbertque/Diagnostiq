@@ -62,6 +62,8 @@ public partial class MainWindow : FluentWindow
         new DiskSpeedStep(),
         new DisplayStep(),
         new BrightnessStep(),
+        new KeyboardStep(),
+        new TouchpadStep(),
     ];
 
     /// <param name="steps">Defaults to the full run; the dev snapshot tool passes a subset.</param>

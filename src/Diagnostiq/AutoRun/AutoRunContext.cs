@@ -30,6 +30,9 @@ public sealed class AutoRunContext(SystemSnapshot snapshot, SensorService? senso
 
     public void Suggest(TestOutcome? outcome) => Suggested?.Invoke(outcome);
 
+    /// <summary>False only for dev snapshots: steps then skip hooks and devices that would grab real input.</summary>
+    public bool CaptureInput { get; set; } = true;
+
     /// <summary>The fullscreen window running this context (set by the window itself).</summary>
     public AutoRunWindow Window { get; internal set; } = null!;
 }
