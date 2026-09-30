@@ -39,11 +39,19 @@ internal static class Snapshot
         int v = Array.IndexOf(args, "--view");
         if (v >= 0 && v + 1 < args.Length) view = args[v + 1].ToLowerInvariant();
         _fullPage = args.Contains("--full");
+        int f = Array.IndexOf(args, "--from");
+        if (f >= 0 && f + 1 < args.Length) _fromStep = args[f + 1];
+        int d = Array.IndexOf(args, "--delay");
+        if (d >= 0 && d + 1 < args.Length && double.TryParse(args[d + 1], out var secs)) _delay = TimeSpan.FromSeconds(secs);
         return true;
     }
 
     // --full: render the whole scrollable page, not just what fits on screen (windows can't exceed the screen height).
     private static bool _fullPage;
+
+    // --view auto: --from StepClassName starts the run at that step; --delay seconds before capturing.
+    private static string? _fromStep;
+    private static TimeSpan _delay = TimeSpan.FromSeconds(3);
 
     public static void Capture(MainWindow window, string path, ApplicationTheme theme, Size size, string view)
     {
@@ -63,23 +71,68 @@ internal static class Snapshot
                 case ("loading", "LoadingView"):
                     // Catch it mid-scan, with some steps ticked and some still running.
                     var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
-                    timer.Tick += (_, _) => { timer.Stop(); Save(window, path); };
+                    timer.Tick += (_, _) => { timer.Stop(); Save(window, window.Host, path); };
                     timer.Start();
                     break;
                 case ("home", "HomeView"):
-                    Save(window, path);
+                    Save(window, window.Host, path);
                     break;
                 case ("win11", "HomeView"):
                     window.ShowWin11();
                     break;
                 case ("win11", "Win11View"):
-                    Save(window, path);
+                    Save(window, window.Host, path);
+                    break;
+                case ("auto" or "auto-summary", "HomeView"):
+                    List<AutoRun.StepView> steps = view == "auto-summary"
+                        ? [new SampleResultsStep()]
+                        : MainWindow.AutomaticSteps().SkipWhile(s => _fromStep is not null && s.GetType().Name != _fromStep).ToList();
+                    var run = window.StartAutomatic(Core.Stress.StressPreset.Quick, steps, w =>
+                    {
+                        // Normal, not maximized/topmost, and off-screen: nothing covers the desktop.
+                        w.WindowState = WindowState.Normal;
+                        w.Topmost = false;
+                        w.WindowStartupLocation = WindowStartupLocation.Manual;
+                        w.Left = -10000;
+                        w.Top = 0;
+                        w.Width = size.Width;
+                        w.Height = size.Height;
+                        w.ShowActivated = false;
+                        w.AnimationsEnabled = false;
+                    });
+                    var wait = new DispatcherTimer { Interval = view == "auto-summary" ? TimeSpan.FromSeconds(1.5) : _delay };
+                    wait.Tick += (_, _) => { wait.Stop(); Save(run, run.Stage, path); };
+                    wait.Start();
                     break;
             }
         };
     }
 
-    private static void Save(MainWindow window, string path) =>
+    /// <summary>Records a typical mix of outcomes so the summary layout can be checked without a 15-minute run.</summary>
+    private sealed class SampleResultsStep : AutoRun.StepView
+    {
+        public override string Id => "sample";
+        public override string Title => "Sample results";
+        public override AutoRun.StepMode Mode => AutoRun.StepMode.Automatic;
+
+        protected override Task OnRunAsync(CancellationToken ct)
+        {
+            (string Id, string Title, Core.Testing.TestOutcome Outcome, string? Detail)[] sample =
+            [
+                ("network", "Wi-Fi and internet", Core.Testing.TestOutcome.Pass, "Online through Home, 14 ms. The Wi-Fi adapter sees 6 networks."),
+                ("cpu", "Processor under load", Core.Testing.TestOutcome.Pass, "Stable. 118% of base clock sustained, 91 °C max."),
+                ("memory", "Memory", Core.Testing.TestOutcome.Pass, "9.8 GB tested over 3 passes, no errors."),
+                ("surface", "Disk surface scan", Core.Testing.TestOutcome.Skipped, "Needs administrator rights."),
+                ("diskspeed", "Disk speed", Core.Testing.TestOutcome.Pass, "Read 3,120 MB/s, write 1,870 MB/s, 21,400 random reads per second."),
+                ("keyboard", "Keyboard", Core.Testing.TestOutcome.Fail, "82 of 84 keys worked. Not working: F7, Right Shift."),
+                ("touchpad", "Touchpad", Core.Testing.TestOutcome.Warn, "96% of the surface, both buttons and vertical scroll work; horizontal scroll didn't register."),
+            ];
+            foreach (var s in sample) Ctx.Run.Record(new(s.Id, s.Title, s.Outcome, s.Detail));
+            return Task.CompletedTask;
+        }
+    }
+
+    private static void Save(Window window, System.Windows.Controls.ContentControl host, string path) =>
         window.Dispatcher.InvokeAsync(() =>
         {
             var root = (FrameworkElement)window.Content;
@@ -87,7 +140,7 @@ internal static class Snapshot
             var dpi = VisualTreeHelper.GetDpi(window);
             RenderTargetBitmap bmp;
 
-            var page = _fullPage && window.Host.Content is System.Windows.Controls.UserControl { Content: System.Windows.Controls.ScrollViewer { Content: FrameworkElement c } } ? c : null;
+            var page = _fullPage && host.Content is System.Windows.Controls.UserControl { Content: System.Windows.Controls.ScrollViewer { Content: FrameworkElement c } } ? c : null;
             if (page is not null)
             {
                 // Render the page content at its full height. RenderTargetBitmap draws a visual at its

@@ -55,8 +55,7 @@ public partial class HomeView : UserControl
         TotalEstimate.Text = $"About {Format.Minutes(total)} in total, including the hands-on tests.";
     }
 
-    private void StartAutomatic_Click(object sender, RoutedEventArgs e) =>
-        _window.Notify("Not built yet", "Automatic mode arrives in the next build.");
+    private void StartAutomatic_Click(object sender, RoutedEventArgs e) => _window.StartAutomatic(SelectedPreset);
 
     private void OpenManual_Click(object sender, RoutedEventArgs e) =>
         _window.Notify("Not built yet", "The manual test dashboard arrives in a later build.");

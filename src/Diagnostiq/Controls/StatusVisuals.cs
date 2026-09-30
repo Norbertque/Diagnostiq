@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using Diagnostiq.Core;
+using Diagnostiq.Core.Testing;
 using Wpf.Ui.Controls;
 
 namespace Diagnostiq.Controls;
@@ -18,6 +19,12 @@ public sealed class StatusIcon : Decorator
     public static readonly DependencyProperty SizeProperty = DependencyProperty.Register(
         nameof(Size), typeof(double), typeof(StatusIcon), new PropertyMetadata(20.0, (d, _) => ((StatusIcon)d).Update()));
 
+    /// <summary>Test results: same as <see cref="State"/> plus a distinct "skipped" icon. Wins over State when set.</summary>
+    public static readonly DependencyProperty OutcomeProperty = DependencyProperty.Register(
+        nameof(Outcome), typeof(TestOutcome?), typeof(StatusIcon), new PropertyMetadata(null, (d, _) => ((StatusIcon)d).Update()));
+
+    public TestOutcome? Outcome { get => (TestOutcome?)GetValue(OutcomeProperty); set => SetValue(OutcomeProperty, value); }
+
     private readonly SymbolIcon _icon = new() { Filled = true };
 
     public StatusIcon()
@@ -33,7 +40,22 @@ public sealed class StatusIcon : Decorator
     private void Update()
     {
         _icon.FontSize = Size;
-        (_icon.Symbol, var brush, var name, _icon.Filled) = State switch
+        if (Outcome == TestOutcome.Skipped)
+        {
+            _icon.Symbol = SymbolRegular.SubtractCircle24;
+            _icon.Filled = false;
+            _icon.SetResourceReference(SymbolIcon.ForegroundProperty, "TextFillColorSecondaryBrush");
+            AutomationProperties.SetName(this, "Skipped");
+            return;
+        }
+        var state = Outcome switch
+        {
+            TestOutcome.Pass => CheckState.Pass,
+            TestOutcome.Warn => CheckState.Warn,
+            TestOutcome.Fail => CheckState.Fail,
+            _ => State,
+        };
+        (_icon.Symbol, var brush, var name, _icon.Filled) = state switch
         {
             CheckState.Pass => (SymbolRegular.CheckmarkCircle24, "SystemFillColorSuccessBrush", "Passed", true),
             CheckState.Warn => (SymbolRegular.Warning24, "SystemFillColorCautionBrush", "Warning", true),

@@ -1,0 +1,39 @@
+<auto:StepView x:Class="Diagnostiq.AutoRun.Steps.BrightnessStep"
+               xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+               xmlns:auto="clr-namespace:Diagnostiq.AutoRun"
+               xmlns:c="clr-namespace:Diagnostiq.Controls">
+    <StackPanel MaxWidth="760" Margin="48" VerticalAlignment="Center">
+        <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Brightness" AutomationProperties.HeadingLevel="Level1" />
+        <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,6,0,24"
+                   Text="The screen dims and brightens by itself. Watch that it changes smoothly without flickering. Then press your brightness keys (often Fn with a sun icon)." />
+
+        <TextBlock x:Name="Level" Style="{StaticResource Diag.Text.Display}" Text="–" AutomationProperties.Name="Current brightness" />
+        <TextBlock Style="{StaticResource Diag.Text.Caption}" Text="current brightness" Margin="0,0,0,24" />
+
+        <Border Style="{StaticResource Diag.Card}" Padding="20,8">
+            <StackPanel>
+                <Grid Margin="0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="200" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <c:StatusIcon x:Name="SweepIcon" VerticalAlignment="Top" Margin="0,0,12,0" />
+                    <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.BodyStrong}" Text="Automatic sweep" />
+                    <TextBlock Grid.Column="2" x:Name="SweepText" Style="{StaticResource Diag.Text.Body}" Text="Dimming and brightening…" />
+                </Grid>
+                <Grid Margin="0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="200" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <c:StatusIcon x:Name="KeysIcon" VerticalAlignment="Top" Margin="0,0,12,0" />
+                    <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.BodyStrong}" Text="Brightness keys" />
+                    <TextBlock Grid.Column="2" x:Name="KeysText" Style="{StaticResource Diag.Text.Body}" Text="Press them after the sweep." />
+                </Grid>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</auto:StepView>

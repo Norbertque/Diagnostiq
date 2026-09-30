@@ -34,7 +34,8 @@ public sealed class SensorService : IDisposable
     public void Open()
     {
         _pdh = new PdhQuery();
-        _load = _pdh.Add(@"\Processor Information(_Total)\% Processor Utility") ?? _pdh.Add(@"\Processor Information(_Total)\% Processor Time");
+        // % Processor Time is busy time (0–100); % Processor Utility also scales with turbo and passes 100.
+        _load = _pdh.Add(@"\Processor Information(_Total)\% Processor Time");
         _perf = _pdh.Add(@"\Processor Information(_Total)\% Processor Performance");
         _freq = _pdh.Add(@"\Processor Information(_Total)\Processor Frequency");
         _zones = _pdh.Add(@"\Thermal Zone Information(*)\High Precision Temperature");
@@ -68,7 +69,7 @@ public sealed class SensorService : IDisposable
     public SensorReading Read()
     {
         _pdh?.Collect();
-        double? load = _load is { } l ? PdhQuery.Value(l) : null;
+        double? load = _load is { } l && PdhQuery.Value(l) is { } v ? Math.Clamp(v, 0, 100) : null;
         double? perf = _perf is { } p ? PdhQuery.Value(p) : null;
         double? nominal = _freq is { } f ? PdhQuery.Value(f) : null;
         double? clock = perf is not null && nominal is > 0 ? nominal * perf / 100 : null;

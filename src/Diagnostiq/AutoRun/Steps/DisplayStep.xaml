@@ -1,0 +1,30 @@
+<auto:StepView x:Class="Diagnostiq.AutoRun.Steps.DisplayStep"
+               xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+               xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+               xmlns:auto="clr-namespace:Diagnostiq.AutoRun">
+    <Grid>
+        <StackPanel x:Name="Intro" MaxWidth="760" Margin="48" VerticalAlignment="Center">
+            <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Screen" AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,6,0,0"
+                       Text="The screen fills with solid colours, one at a time. Look for dead or stuck pixels, lines, dark blotches and uneven backlight near the edges." />
+            <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,8,0,0"
+                       Text="Click anywhere or press Space for the next colour." />
+            <ui:Button x:Name="StartButton" Appearance="Primary" Content="Show colours" Icon="{ui:SymbolIcon Play24}"
+                       MinHeight="40" Padding="16,8" Margin="0,24,0,0" Click="Start_Click" Focusable="False" />
+
+            <Border x:Name="Question" Style="{StaticResource Diag.Card}" Margin="0,24,0,0" Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" Text="Did the screen look clean on every colour?" />
+                    <TextBlock Style="{StaticResource Diag.Text.Body}" Margin="0,4,0,0"
+                               Text="Choose Pass if it did, Fail if you saw dead pixels, lines, blotches or uneven backlight." />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- Full-bleed colour layer; the cursor is hidden so it can't be mistaken for a stuck pixel. -->
+        <Border x:Name="ColorLayer" Visibility="Collapsed" Cursor="None" MouseLeftButtonDown="ColorLayer_Click">
+            <TextBlock x:Name="ColorHint" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,24" FontSize="14" />
+        </Border>
+    </Grid>
+</auto:StepView>

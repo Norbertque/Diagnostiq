@@ -3,7 +3,11 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using Diagnostiq.Core;
+using Diagnostiq.AutoRun;
+using Diagnostiq.AutoRun.Steps;
 using Diagnostiq.Core.Sensors;
+using Diagnostiq.Core.Stress;
+using Diagnostiq.Core.Testing;
 using Diagnostiq.Views;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -46,6 +50,37 @@ public partial class MainWindow : FluentWindow
     }
 
     public void ShowHome() => Navigate(_home ??= new HomeView(this, Snapshot!));
+
+    /// <summary>The last Automatic run, kept for Home and the report.</summary>
+    public TestRun? LastRun { get; private set; }
+
+    /// <summary>The Automatic run's steps, in order.</summary>
+    public static List<StepView> AutomaticSteps() =>
+    [
+        new ChecksStep(),
+        new StressStep(),
+        new DiskSpeedStep(),
+        new DisplayStep(),
+        new BrightnessStep(),
+    ];
+
+    /// <param name="steps">Defaults to the full run; the dev snapshot tool passes a subset.</param>
+    /// <param name="configure">Lets the dev snapshot tool render the window off-screen.</param>
+    public AutoRunWindow StartAutomatic(StressPreset preset, IEnumerable<StepView>? steps = null, Action<AutoRunWindow>? configure = null)
+    {
+        var context = new AutoRunContext(Snapshot!, Sensors, preset, new TestRun());
+        var run = new AutoRunWindow(context, steps ?? AutomaticSteps()) { Owner = this };
+        configure?.Invoke(run);
+        IsEnabled = false;
+        run.Closed += (_, _) =>
+        {
+            IsEnabled = true;
+            LastRun = run.Run;
+            Activate();
+        };
+        run.Show();
+        return run;
+    }
 
     public void ShowWin11() => Navigate(new Win11View(this, Snapshot!));
 
