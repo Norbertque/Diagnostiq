@@ -1,5 +1,4 @@
 using System.Windows;
-using System.Windows.Automation;
 using System.Windows.Controls;
 using Wpf.Ui.Controls;
 using TextBlock = System.Windows.Controls.TextBlock;
@@ -37,7 +36,7 @@ public sealed class MetricCard : Border
 
     public Sparkline Spark { get; } = new() { Height = 40, Margin = new Thickness(0, 12, 0, 0) };
 
-    public string Label { get => _label.Text; set { _label.Text = value; AutomationProperties.SetName(this, value); } }
+    public string Label { get => _label.Text; set => _label.Text = value; }
     public SymbolRegular Icon { get => _icon.Symbol; set => _icon.Symbol = value; }
 
     public void Set(string value, string? sub = null)

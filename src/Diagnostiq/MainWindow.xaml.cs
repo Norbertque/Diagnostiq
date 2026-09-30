@@ -1,5 +1,8 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Automation;
+using System.Windows.Automation.Peers;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using Diagnostiq.Core;
@@ -20,12 +23,28 @@ public partial class MainWindow : FluentWindow
     private HomeView? _home;
     private ManualView? _manual;
     private bool _closeConfirmed;
+    private bool _closePending;
 
     public MainWindow()
     {
         InitializeComponent();
         _snackbar.SetSnackbarPresenter(SnackbarHost);
         Closing += OnClosing;
+        FitToWorkArea();
+    }
+
+    /// <summary>
+    /// Small screens (1366×768, or 1080p at 150 %) are shorter than the default size: never open larger
+    /// than the work area, where the title bar could end up off-screen, and start maximised when it's short.
+    /// </summary>
+    private void FitToWorkArea()
+    {
+        var area = SystemParameters.WorkArea;
+        MinWidth = Math.Min(MinWidth, area.Width);
+        MinHeight = Math.Min(MinHeight, area.Height);
+        Width = Math.Min(Width, area.Width - 16);
+        Height = Math.Min(Height, area.Height - 16);
+        if (area.Height < 800) WindowState = WindowState.Maximized;
     }
 
     public SystemSnapshot? Snapshot { get; private set; }
@@ -144,12 +163,21 @@ public partial class MainWindow : FluentWindow
         void Shown(object? sender, RoutedEventArgs e)
         {
             view.Loaded -= Shown;
+            // The button that led here has left the tree; start keyboard focus at the top of the new view.
+            view.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
             ViewShown?.Invoke(view.GetType().Name);
         }
     }
 
-    public void Notify(string title, string message, ControlAppearance appearance = ControlAppearance.Secondary, SymbolRegular icon = SymbolRegular.Info24) =>
-        _snackbar.Show(title, message, appearance, new SymbolIcon(icon), TimeSpan.FromSeconds(4));
+    /// <param name="timeout">How long the message stays; 4 s by default, longer for errors worth reading.</param>
+    public void Notify(string title, string message, ControlAppearance appearance = ControlAppearance.Secondary,
+        SymbolRegular icon = SymbolRegular.Info24, TimeSpan? timeout = null)
+    {
+        _snackbar.Show(title, message, appearance, new SymbolIcon(icon), timeout ?? TimeSpan.FromSeconds(4));
+        // The snackbar raises no UI Automation events of its own, so screen readers would miss it.
+        UIElementAutomationPeer.CreatePeerForElement(this)?.RaiseNotificationEvent(AutomationNotificationKind.Other,
+            AutomationNotificationProcessing.ImportantMostRecent, $"{title}. {message}", "Diagnostiq.Notify");
+    }
 
     public Task<ContentDialogResult> AskAsync(string title, string message, string primary, string close = "Cancel") =>
         new ContentDialog(DialogHost)
@@ -166,18 +194,37 @@ public partial class MainWindow : FluentWindow
     {
         if (_closeConfirmed || !PawnIoSetup.InstalledByUs) { Cleanup(); return; }
         e.Cancel = true;
-        var answer = await AskAsync("Remove the sensor driver?",
-            "Diagnostiq installed the PawnIO sensor driver for this session. Remove it now, or keep it if you'll test this laptop again.",
-            "Remove", "Keep it");
-        if (answer == ContentDialogResult.Primary)
+        if (_closePending) return;   // already asking, or the driver is being removed
+        _closePending = true;
+        try
         {
-            Sensors?.Dispose();   // release the driver handle before uninstalling
-            var result = await Task.Run(PawnIoSetup.UninstallAsync);
-            if (!result.Success)
-                System.Windows.MessageBox.Show(result.Message, "Diagnostiq", System.Windows.MessageBoxButton.OK, MessageBoxImage.Warning);
+            var answer = await AskAsync("Remove the sensor driver?",
+                "Diagnostiq installed the PawnIO sensor driver for this session. Remove it now, or keep it if you'll test this laptop again.",
+                "Remove", "Keep it");
+            if (answer == ContentDialogResult.Primary)
+            {
+                // The setup can take a minute and shows nothing; keep the window from taking clicks meanwhile.
+                IsEnabled = false;
+                Notify("Removing the sensor driver", "Diagnostiq closes when it's done.", timeout: TimeSpan.FromMinutes(5));
+                Sensors?.Dispose();   // release the driver handle before uninstalling
+                PawnIoSetupResult result;
+                try { result = await Task.Run(PawnIoSetup.UninstallAsync); }
+                catch (Exception ex)
+                {
+                    // The uninstaller is a separate program; whatever it does, the app must still close.
+                    App.LogError(ex);
+                    result = new(false, $"Couldn't remove the PawnIO sensor driver: {ex.Message}");
+                }
+                if (!result.Success)
+                    System.Windows.MessageBox.Show(result.Message, "Diagnostiq", System.Windows.MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            _closeConfirmed = true;
+            Close();
         }
-        _closeConfirmed = true;
-        Close();
+        finally
+        {
+            _closePending = false;
+        }
     }
 
     private void Cleanup()

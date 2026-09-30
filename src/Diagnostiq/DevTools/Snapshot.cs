@@ -62,10 +62,14 @@ internal static class Snapshot
         window.AnimationsEnabled = false;
         window.WindowBackdropType = WindowBackdropType.None;
         window.WindowStartupLocation = WindowStartupLocation.Manual;
+        window.WindowState = WindowState.Normal;   // MainWindow maximises itself on short screens
         window.Left = -10000;  // render off-screen; nothing flashes on the desktop
+        window.MinWidth = Math.Min(window.MinWidth, size.Width);
+        window.MinHeight = Math.Min(window.MinHeight, size.Height);
         window.Width = size.Width;
         window.Height = size.Height;
-        ApplicationThemeManager.Apply(theme, WindowBackdropType.None, updateAccent: false);
+        // Same accent colours as the real app (SystemThemeWatcher updates them), so contrast checks on snapshots hold.
+        ApplicationThemeManager.Apply(theme, WindowBackdropType.None, updateAccent: true);
         Theme.ThemeService.ApplyTokens(theme);
         if (_seedSession)
             foreach (var r in SampleResults) window.Session.Record(r);

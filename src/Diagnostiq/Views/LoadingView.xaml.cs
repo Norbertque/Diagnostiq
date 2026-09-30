@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using Diagnostiq.Core;
@@ -31,9 +32,10 @@ public partial class LoadingView : UserControl
         _slowTimer.Tick += (_, _) =>
         {
             _slowTimer.Stop();
-            var waiting = _rows.Where(r => r.State is null).Select(r => r.Label.ToLowerInvariant()).ToList();
+            // Lower-case only the first letter: the labels hold names like BIOS, TPM and Windows 11.
+            var waiting = _rows.Where(r => r.State is null).Select(r => char.ToLowerInvariant(r.Label[0]) + r.Label[1..]).ToList();
             if (waiting.Count > 0)
-                Hint.Text = $"Still waiting on: {string.Join(", ", waiting)}. Older laptops can take a little longer.";
+                Hint.Text = $"Still working on: {string.Join(", ", waiting)}. Older laptops can take a little longer.";
         };
         _slowTimer.Start();
     }
@@ -52,6 +54,8 @@ public partial class LoadingView : UserControl
         int done = _rows.Count(r => r.State is not null);
         Bar.Value = done;
         Counter.Text = $"{done} of {_rows.Count}";
+        // Nothing here takes focus, so without a live region a screen reader hears nothing for 5 to 20 seconds.
+        UIElementAutomationPeer.CreatePeerForElement(Counter)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
     }
 
     /// <summary>Ticks any rows whose report hasn't landed yet and pauses briefly so the finished list registers.</summary>
@@ -70,6 +74,9 @@ public partial class LoadingView : UserControl
         public CheckState? State { get; private set; }
         public string StatusText { get; private set; } = "Checking…";
         public string Announcement => $"{Label}: {StatusText}";
+
+        /// <summary>The list reads items by their ToString; the default would be the type name.</summary>
+        public override string ToString() => Announcement;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

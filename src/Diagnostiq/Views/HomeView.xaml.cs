@@ -38,9 +38,11 @@ public partial class HomeView : UserControl
         AdminBanner.Visibility = snapshot.IsAdmin ? Visibility.Collapsed : Visibility.Visible;
         SetUpSensorBanner();
 
-        // Non-breaking spaces/hyphen keep "Wi-Fi" and "USB ports" whole; the dot stays with the item before it.
-        string[] included = ["CPU stress", "Memory", "Disk scan", "Disk speed", "Screen", "Brightness", "Keyboard", "Touchpad",
-                             "Speakers", "Headphones", "Microphone", "Camera", "USB ports", "Charger", "Battery", "Wi-Fi"];
+        // Named as on the Tests page and in the report. Non-breaking spaces/hyphen keep each name whole; the dot
+        // stays with the item before it.
+        string[] included = ["Processor under load", "Memory", "Disk surface scan", "Disk speed", "Screen", "Brightness", "Keyboard",
+                             "Touchpad", "Speakers", "Headphone jack", "Microphone", "Camera", "USB ports", "Charger", "Battery drain",
+                             "Wi-Fi and internet"];
         IncludedTests.Text = string.Join(" · ", included.Select(t => t.Replace(' ', ' ').Replace('-', '‑')));
         StandardRadio.IsChecked = true;
         SizeChanged += (_, e) => TileColumns = e.NewSize.Width >= 1060 ? 3 : e.NewSize.Width >= 700 ? 2 : 1;
@@ -55,7 +57,8 @@ public partial class HomeView : UserControl
         if (results.Count == 0) { LastCheckCard.Visibility = Visibility.Collapsed; return; }
 
         var health = HealthScore.Compute(_snapshot, _window.Session);
-        int problems = results.Count(r => r.Outcome == TestOutcome.Fail);
+        // Everything that cost points (battery, drive and driver problems too), so the line matches the score.
+        int problems = health.Deductions.Count;
         int tested = results.Count(r => r.Outcome != TestOutcome.Skipped);
         LastCheckIcon.State = health.Verdict switch
         {
@@ -64,8 +67,8 @@ public partial class HomeView : UserControl
             _ => CheckState.Fail,
         };
         LastCheckTitle.Text = $"Health score {health.Score} · {HealthScore.Label(health.Verdict)}";
-        LastCheckDetail.Text = $"{tested} test{(tested == 1 ? "" : "s")} run this session" +
-                               (problems > 0 ? $", {problems} failed." : ", none failed.") +
+        LastCheckDetail.Text = (tested == 0 ? "No tests run this session" : $"{tested} test{(tested == 1 ? "" : "s")} run this session") +
+                               (problems == 0 ? ", no problems found." : $", {problems} problem{(problems == 1 ? "" : "s")} found.") +
                                (health.NotTested.Count > 0 ? $" {health.NotTested.Count} not tested yet." : "");
         LastCheckCard.Visibility = Visibility.Visible;
     }
@@ -131,7 +134,16 @@ public partial class HomeView : UserControl
     {
         InstallSensorButton.IsEnabled = false;
         InstallSensorButton.Content = "Installing…";
-        var result = await Task.Run(PawnIoSetup.InstallAsync);
+
+        // The setup is a separate program (antivirus can block it) and LibreHardwareMonitor can throw
+        // anything while reopening; whatever happens, the button must not stay stuck on "Installing…".
+        PawnIoSetupResult result;
+        try { result = await Task.Run(PawnIoSetup.InstallAsync); }
+        catch (Exception ex)
+        {
+            App.LogError(ex);
+            result = new(false, $"The sensor driver couldn't be installed: {ex.Message}");
+        }
         if (!result.Success)
         {
             SensorMessage.Text = result.Message;
@@ -141,21 +153,39 @@ public partial class HomeView : UserControl
         }
 
         // Re-attach the sensors so the new driver is used right away.
-        var reading = await Task.Run(() =>
+        SensorReading? reading;
+        try
         {
-            var sensors = _window.Sensors;
-            if (sensors is null) { sensors = new SensorService(); sensors.Open(); _window.Sensors = sensors; }
-            else sensors.ReopenHardware();
-            return sensors.Read();
-        });
+            reading = await Task.Run(() =>
+            {
+                var sensors = _window.Sensors;
+                if (sensors is null)
+                {
+                    sensors = new SensorService();
+                    try { sensors.Open(); }
+                    catch { sensors.Dispose(); throw; }
+                    _window.Sensors = sensors;
+                }
+                else sensors.ReopenHardware();
+                return sensors.Read();
+            });
+        }
+        catch (Exception ex)
+        {
+            App.LogError(ex);
+            reading = null;
+        }
 
         SensorBanner.SetResourceReference(StyleProperty, "Diag.Banner.Pass");
         SensorIcon.Symbol = SymbolRegular.CheckmarkCircle24;
         SensorIcon.SetResourceReference(SymbolIcon.ForegroundProperty, "SystemFillColorSuccessBrush");
         SensorTitle.Text = "Sensor driver installed";
-        SensorMessage.Text = reading is { CpuTempC: { } t, CpuTempLimited: false }
-            ? $"CPU temperature now reads {t:0} °C. You'll be asked about removing the driver when you close the app."
-            : "You'll be asked about removing the driver when you close the app.";
+        SensorMessage.Text = reading switch
+        {
+            { CpuTempC: { } t, CpuTempLimited: false } => $"CPU temperature now reads {t:0} °C. You'll be asked about removing the driver when you close the app.",
+            null => "Restart Diagnostiq to read exact temperatures. You'll be asked about removing the driver when you close the app.",
+            _ => "You'll be asked about removing the driver when you close the app.",
+        };
         SensorActions.Visibility = Visibility.Collapsed;
     }
 

@@ -41,14 +41,17 @@ public sealed class DetailSection : Border
         Grid.SetRow(l, r);
         _rows.Children.Add(l);
 
-        var v = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 4) };
+        // A WrapPanel hands its width to the text so long values wrap, and the pill moves to the next line when
+        // there's no room beside it (a horizontal StackPanel measures with infinite width and clips both).
+        var v = new WrapPanel { Margin = new Thickness(0, 4, 0, 4) };
         if (!string.IsNullOrWhiteSpace(value))
         {
-            var t = new TextBlock { Text = value, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
+            var t = new TextBlock { Text = value, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center,
+                                    Margin = new Thickness(0, 0, pill is null ? 0 : 10, 0) };
             t.SetResourceReference(StyleProperty, "Diag.Text.Body");
             v.Children.Add(t);
         }
-        if (pill is not null) v.Children.Add(new StatusPill { Text = pill, State = state, Margin = new Thickness(value is null ? 0 : 10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
+        if (pill is not null) v.Children.Add(new StatusPill { Text = pill, State = state, VerticalAlignment = VerticalAlignment.Center });
         Grid.SetRow(v, r);
         Grid.SetColumn(v, 1);
         _rows.Children.Add(v);

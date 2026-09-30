@@ -4,9 +4,9 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:c="clr-namespace:Diagnostiq.Controls">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="{StaticResource Diag.Pad.Page}" MaxWidth="960">
+        <StackPanel Margin="{StaticResource Diag.Pad.Page}" MaxWidth="{StaticResource Diag.Page.MaxWidth}">
             <ui:Button x:Name="BackButton" Appearance="Transparent" Icon="{ui:SymbolIcon ArrowLeft24}" Content="Home"
-                       Margin="-8,0,0,12" Click="Back_Click" AutomationProperties.Name="Back to Home" />
+                       Margin="0,0,0,12" Click="Back_Click" AutomationProperties.Name="Back to Home" />
 
             <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Windows 11 requirements" AutomationProperties.HeadingLevel="Level1" />
             <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,20"
@@ -45,7 +45,8 @@
                                 <StackPanel Grid.Column="2">
                                     <TextBlock Style="{StaticResource Diag.Text.Body}" Text="{Binding Detail}" />
                                     <Border Margin="0,8,0,0" Padding="12,8" CornerRadius="{StaticResource Diag.Radius.Control}"
-                                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                            Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                                             Visibility="{Binding HintVisibility}">
                                         <TextBlock Style="{StaticResource Diag.Text.Body}" TextWrapping="Wrap">
                                             <Run Text="{Binding HintLabel, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="{Binding Hint, Mode=OneWay}" />

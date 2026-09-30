@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using Diagnostiq.Core;
 using Diagnostiq.Core.Testing;
@@ -65,6 +66,17 @@ public sealed class StatusIcon : Decorator
         };
         _icon.SetResourceReference(SymbolIcon.ForegroundProperty, brush);
         AutomationProperties.SetName(this, name);
+    }
+
+    // A Decorator has no automation peer, so without this the name set above never reaches screen readers,
+    // while the icon font's private-use glyph shows up as unreadable text.
+    protected override AutomationPeer OnCreateAutomationPeer() => new Peer(this);
+
+    private sealed class Peer(StatusIcon owner) : FrameworkElementAutomationPeer(owner)
+    {
+        protected override AutomationControlType GetAutomationControlTypeCore() => AutomationControlType.Image;
+        protected override string GetClassNameCore() => nameof(StatusIcon);
+        protected override List<AutomationPeer>? GetChildrenCore() => null;   // hide the glyph
     }
 }
 
