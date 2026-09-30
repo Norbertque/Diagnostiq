@@ -22,4 +22,9 @@
     <InternalsVisibleTo Include="Diagnostiq.Core.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Signed PawnIO driver setup 2.2.0 (GPL-2.0, github.com/namazso/PawnIO.Setup), shipped unmodified. -->
+    <EmbeddedResource Include="Resources\PawnIO_setup.exe" LogicalName="PawnIO_setup.exe" />
+  </ItemGroup>
+
 </Project>

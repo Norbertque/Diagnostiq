@@ -28,11 +28,6 @@ public sealed class SensorService : IDisposable
     private PdhQuery? _pdh;
     private IntPtr? _load, _perf, _freq, _zones;
 
-    public static bool PawnIoInstalled
-    {
-        get { try { return LibreHardwareMonitor.PawnIo.PawnIo.IsInstalled; } catch { return false; } }
-    }
-
     public bool UsingPawnIo { get; private set; }
 
     /// <summary>Slow (loads drivers/vendor libraries): call from a background thread.</summary>
@@ -44,16 +39,29 @@ public sealed class SensorService : IDisposable
         _freq = _pdh.Add(@"\Processor Information(_Total)\Processor Frequency");
         _zones = _pdh.Add(@"\Thermal Zone Information(*)\High Precision Temperature");
         _pdh.Collect(); // rate counters need a first sample
+        OpenHardware();
+    }
 
+    /// <summary>Re-attaches LibreHardwareMonitor, e.g. right after PawnIO was installed. Background thread.</summary>
+    public void ReopenHardware()
+    {
+        try { _lhm?.Close(); } catch { }
+        _lhm = null;
+        OpenHardware();
+    }
+
+    private void OpenHardware()
+    {
         try
         {
             _lhm = new Computer { IsCpuEnabled = true, IsGpuEnabled = true, IsMotherboardEnabled = true, IsControllerEnabled = true };
             _lhm.Open();
-            UsingPawnIo = PawnIoInstalled;
+            UsingPawnIo = PawnIoSetup.State == PawnIoState.Installed;
         }
         catch (Exception)
         {
             _lhm = null; // no driver / blocked: counters + thermal zones still work
+            UsingPawnIo = false;
         }
     }
 
