@@ -10,7 +10,7 @@ using Wpf.Ui.Controls;
 namespace Diagnostiq.DevTools;
 
 /// <summary>
-/// Debug-only: <c>Diagnostiq.exe --snapshot out.png [--theme light|dark] [--size 1280x800] [--view loading|home|win11]</c>
+/// Debug-only: <c>Diagnostiq.exe --snapshot out.png [--theme light|dark] [--size 1280x800] [--view loading|home|win11|auto|auto-summary|manual-PAGE] [--full] [--session]</c>
 /// renders a view of the main window to a PNG and exits, so layouts can be checked in both
 /// themes and at several sizes without driving the desktop. The hardware probes run for real.
 /// Mica can't be captured by RenderTargetBitmap, so snapshots use a solid backdrop.
@@ -39,6 +39,7 @@ internal static class Snapshot
         int v = Array.IndexOf(args, "--view");
         if (v >= 0 && v + 1 < args.Length) view = args[v + 1].ToLowerInvariant();
         _fullPage = args.Contains("--full");
+        _seedSession = args.Contains("--session");
         int f = Array.IndexOf(args, "--from");
         if (f >= 0 && f + 1 < args.Length) _fromStep = args[f + 1];
         int d = Array.IndexOf(args, "--delay");
@@ -48,6 +49,9 @@ internal static class Snapshot
 
     // --full: render the whole scrollable page, not just what fits on screen (windows can't exceed the screen height).
     private static bool _fullPage;
+
+    // --session: pre-fill the session with sample results (Home "last check" card, Tests and Report pages).
+    private static bool _seedSession;
 
     // --view auto: --from StepClassName starts the run at that step; --delay seconds before capturing.
     private static string? _fromStep;
@@ -63,6 +67,8 @@ internal static class Snapshot
         window.Height = size.Height;
         ApplicationThemeManager.Apply(theme, WindowBackdropType.None, updateAccent: false);
         Theme.ThemeService.ApplyTokens(theme);
+        if (_seedSession)
+            foreach (var r in SampleResults) window.Session.Record(r);
 
         window.ViewShown += name =>
         {
@@ -76,6 +82,12 @@ internal static class Snapshot
                     break;
                 case ("home", "HomeView"):
                     Save(window, window.Host, path);
+                    break;
+                case ("report", "HomeView"):
+                    // The HTML/JSON report for this machine and the session, written next to the path given.
+                    var saved = Core.Reporting.ReportWriter.Save(Core.Reporting.ReportModel.Build(window.Snapshot!, window.Session), Path.GetDirectoryName(path));
+                    Console.WriteLine(saved.HtmlPath);
+                    Application.Current.Shutdown();
                     break;
                 case ("win11", "HomeView"):
                     window.ShowWin11();
@@ -127,7 +139,19 @@ internal static class Snapshot
         return null;
     }
 
-    /// <summary>Records a typical mix of outcomes so the summary layout can be checked without a 15-minute run.</summary>
+    /// <summary>A typical mix of outcomes, so result layouts can be checked without a 15-minute run.</summary>
+    private static readonly Core.Testing.TestResult[] SampleResults =
+    [
+        new("network", "Wi-Fi and internet", Core.Testing.TestOutcome.Pass, "Online through Home, 14 ms. The Wi-Fi adapter sees 6 networks."),
+        new("cpu", "Processor under load", Core.Testing.TestOutcome.Pass, "Stable. 118% of base clock sustained, 91 °C max."),
+        new("memory", "Memory", Core.Testing.TestOutcome.Pass, "9.8 GB tested over 3 passes, no errors."),
+        new("surface", "Disk surface scan", Core.Testing.TestOutcome.Skipped, "Needs administrator rights."),
+        new("diskspeed", "Disk speed", Core.Testing.TestOutcome.Pass, "Read 3,120 MB/s, write 1,870 MB/s, 21,400 random reads per second."),
+        new("keyboard", "Keyboard", Core.Testing.TestOutcome.Fail, "82 of 84 keys worked. Not working: F7, Right Shift."),
+        new("touchpad", "Touchpad", Core.Testing.TestOutcome.Warn, "96% of the surface, both buttons and vertical scroll work; horizontal scroll didn't register."),
+    ];
+
+    /// <summary>Records <see cref="SampleResults"/> so the summary layout can be checked.</summary>
     private sealed class SampleResultsStep : AutoRun.StepView
     {
         public override string Id => "sample";
@@ -136,17 +160,7 @@ internal static class Snapshot
 
         protected override Task OnRunAsync(CancellationToken ct)
         {
-            (string Id, string Title, Core.Testing.TestOutcome Outcome, string? Detail)[] sample =
-            [
-                ("network", "Wi-Fi and internet", Core.Testing.TestOutcome.Pass, "Online through Home, 14 ms. The Wi-Fi adapter sees 6 networks."),
-                ("cpu", "Processor under load", Core.Testing.TestOutcome.Pass, "Stable. 118% of base clock sustained, 91 °C max."),
-                ("memory", "Memory", Core.Testing.TestOutcome.Pass, "9.8 GB tested over 3 passes, no errors."),
-                ("surface", "Disk surface scan", Core.Testing.TestOutcome.Skipped, "Needs administrator rights."),
-                ("diskspeed", "Disk speed", Core.Testing.TestOutcome.Pass, "Read 3,120 MB/s, write 1,870 MB/s, 21,400 random reads per second."),
-                ("keyboard", "Keyboard", Core.Testing.TestOutcome.Fail, "82 of 84 keys worked. Not working: F7, Right Shift."),
-                ("touchpad", "Touchpad", Core.Testing.TestOutcome.Warn, "96% of the surface, both buttons and vertical scroll work; horizontal scroll didn't register."),
-            ];
-            foreach (var s in sample) Ctx.Run.Record(new(s.Id, s.Title, s.Outcome, s.Detail));
+            foreach (var r in SampleResults) Ctx.Run.Record(r);
             return Task.CompletedTask;
         }
     }

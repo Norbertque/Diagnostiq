@@ -1,9 +1,9 @@
-using Diagnostiq.Core.Formatting;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using Diagnostiq.Controls;
 using Diagnostiq.Core;
+using Diagnostiq.Core.Formatting;
 using Diagnostiq.Core.Hardware;
 using Diagnostiq.Core.Storage;
 using Diagnostiq.Core.Win11;

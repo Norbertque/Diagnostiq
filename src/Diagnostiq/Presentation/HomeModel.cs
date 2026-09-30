@@ -1,5 +1,5 @@
-using Diagnostiq.Core.Formatting;
 using Diagnostiq.Core;
+using Diagnostiq.Core.Formatting;
 using Diagnostiq.Core.Hardware;
 using Diagnostiq.Core.Os;
 using Diagnostiq.Core.Storage;

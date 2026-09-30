@@ -1,11 +1,13 @@
-using Diagnostiq.Core.Formatting;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using Diagnostiq.Core;
+using Diagnostiq.Core.Formatting;
+using Diagnostiq.Core.Scoring;
 using Diagnostiq.Core.Sensors;
 using Diagnostiq.Core.Stress;
+using Diagnostiq.Core.Testing;
 using Diagnostiq.Presentation;
 using Wpf.Ui.Controls;
 
@@ -42,7 +44,33 @@ public partial class HomeView : UserControl
         IncludedTests.Text = string.Join(" · ", included.Select(t => t.Replace(' ', ' ').Replace('-', '‑')));
         StandardRadio.IsChecked = true;
         SizeChanged += (_, e) => TileColumns = e.NewSize.Width >= 1060 ? 3 : e.NewSize.Width >= 700 ? 2 : 1;
+        Loaded += (_, _) => { _window.SessionChanged += UpdateLastCheck; UpdateLastCheck(); };
+        Unloaded += (_, _) => _window.SessionChanged -= UpdateLastCheck;
     }
+
+    /// <summary>Score of everything tested this session, so returning Home shows where things stand.</summary>
+    private void UpdateLastCheck()
+    {
+        var results = _window.Session.Results;
+        if (results.Count == 0) { LastCheckCard.Visibility = Visibility.Collapsed; return; }
+
+        var health = HealthScore.Compute(_snapshot, _window.Session);
+        int problems = results.Count(r => r.Outcome == TestOutcome.Fail);
+        int tested = results.Count(r => r.Outcome != TestOutcome.Skipped);
+        LastCheckIcon.State = health.Verdict switch
+        {
+            HealthVerdict.Excellent => CheckState.Pass,
+            HealthVerdict.Ok => CheckState.Warn,
+            _ => CheckState.Fail,
+        };
+        LastCheckTitle.Text = $"Health score {health.Score} · {HealthScore.Label(health.Verdict)}";
+        LastCheckDetail.Text = $"{tested} test{(tested == 1 ? "" : "s")} run this session" +
+                               (problems > 0 ? $", {problems} failed." : ", none failed.") +
+                               (health.NotTested.Count > 0 ? $" {health.NotTested.Count} not tested yet." : "");
+        LastCheckCard.Visibility = Visibility.Visible;
+    }
+
+    private void ViewReport_Click(object sender, RoutedEventArgs e) => _window.ShowManual("report");
 
     public int TileColumns { get => (int)GetValue(TileColumnsProperty); set => SetValue(TileColumnsProperty, value); }
 

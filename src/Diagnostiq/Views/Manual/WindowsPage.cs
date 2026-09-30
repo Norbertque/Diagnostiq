@@ -1,8 +1,8 @@
-using Diagnostiq.Core.Formatting;
 using System.Windows;
 using System.Windows.Controls;
 using Diagnostiq.Controls;
 using Diagnostiq.Core;
+using Diagnostiq.Core.Formatting;
 using Diagnostiq.Core.Os;
 using Diagnostiq.Core.Probing;
 using Diagnostiq.Core.Win11;

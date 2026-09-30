@@ -62,6 +62,26 @@
                 </Grid>
             </Border>
 
+            <!-- ===== Latest results this session (hidden until something was tested) ===== -->
+            <Border x:Name="LastCheckCard" Style="{StaticResource Diag.Card}" Margin="0,0,0,16" Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <c:StatusIcon x:Name="LastCheckIcon" Size="28" VerticalAlignment="Top" Margin="0,0,16,0" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock x:Name="LastCheckTitle" Style="{StaticResource Diag.Text.BodyStrong}" FontSize="16"
+                                   AutomationProperties.HeadingLevel="Level2" />
+                        <TextBlock x:Name="LastCheckDetail" Style="{StaticResource Diag.Text.Body}" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" />
+                    </StackPanel>
+                    <ui:Button Grid.Column="2" Content="View report" Margin="16,0,0,0" VerticalAlignment="Center"
+                               Icon="{ui:SymbolIcon DocumentText24}" Click="ViewReport_Click" />
+                </Grid>
+            </Border>
+
             <!-- ===== Primary choice: Automatic or Manual ===== -->
             <Grid Margin="0,0,0,16">
                 <Grid.ColumnDefinitions>
