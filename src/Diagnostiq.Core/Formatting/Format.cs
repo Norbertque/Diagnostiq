@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Diagnostiq.Presentation;
+namespace Diagnostiq.Core.Formatting;
 
 /// <summary>User-facing number and date formats. The UI is English, so formats are fixed rather than per-locale.</summary>
 public static class Format

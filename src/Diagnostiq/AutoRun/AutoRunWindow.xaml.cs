@@ -107,7 +107,7 @@ public partial class AutoRunWindow : Window
         StepTitle.Text = _runCts.IsCancellationRequested ? "Stopped early" : "Finished";
         VerdictButtons.Visibility = Visibility.Collapsed;
         ExitButton.Content = "Close";
-        Present(new SummaryView(_ctx.Run, _ctx.Snapshot));
+        Present(new SummaryView(_ctx.Run, _ctx.Snapshot, _ctx.Session, saveReport: _ctx.LiveDevices));
     }
 
     /// <summary>Slides the new screen in from the right (skipped when Windows animations are off).</summary>

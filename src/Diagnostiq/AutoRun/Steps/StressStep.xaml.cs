@@ -1,3 +1,4 @@
+using Diagnostiq.Core.Formatting;
 using Diagnostiq.Core;
 using Diagnostiq.Core.Stress;
 using Diagnostiq.Core.Testing;

@@ -27,6 +27,16 @@ public sealed class ReportPage : UserControl
         title.SetResourceReference(StyleProperty, "Diag.Text.Title");
         _page.Children.Add(title);
 
+        var snapshot = _window.Snapshot!;
+        _page.Children.Add(new ScoreCard(Core.Scoring.HealthScore.Compute(snapshot, _window.Session)));
+        var save = new Wpf.Ui.Controls.Button { Content = "Save and open report", Appearance = Wpf.Ui.Controls.ControlAppearance.Primary, Margin = new Thickness(0, 0, 0, 16) };
+        save.Click += async (_, _) =>
+        {
+            try { Reports.Open((await Reports.SaveAsync(snapshot, _window.Session)).HtmlPath); }
+            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { _window.Notify("Couldn't save the report", ex.Message); }
+        };
+        _page.Children.Add(save);
+
         var results = new DetailSection("Results so far");
         var list = _window.Session.Results;
         if (list.Count == 0) results.Note("No tests run yet. Start the Automatic check or run tests from the Tests page.");

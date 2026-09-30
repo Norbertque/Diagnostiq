@@ -33,6 +33,9 @@ public sealed class AutoRunContext(SystemSnapshot snapshot, SensorService? senso
     /// <summary>False only for dev snapshots: steps then skip the keyboard hook, sound, microphone and camera.</summary>
     public bool LiveDevices { get; set; } = true;
 
+    /// <summary>The whole session (earlier manual tests), so the summary report covers everything; null in tests.</summary>
+    public TestRun? Session { get; init; }
+
     /// <summary>The fullscreen window running this context (set by the window itself).</summary>
     public AutoRunWindow Window { get; internal set; } = null!;
 }

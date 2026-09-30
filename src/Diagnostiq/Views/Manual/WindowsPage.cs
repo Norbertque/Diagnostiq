@@ -1,3 +1,4 @@
+using Diagnostiq.Core.Formatting;
 using System.Windows;
 using System.Windows.Controls;
 using Diagnostiq.Controls;

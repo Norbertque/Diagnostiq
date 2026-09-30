@@ -110,7 +110,7 @@ public partial class MainWindow : FluentWindow
     /// <param name="configure">Lets the dev snapshot tool render the window off-screen.</param>
     public AutoRunWindow StartAutomatic(StressPreset preset, IEnumerable<StepView>? steps = null, Action<AutoRunWindow>? configure = null)
     {
-        var context = new AutoRunContext(Snapshot!, Sensors, preset, new TestRun());
+        var context = new AutoRunContext(Snapshot!, Sensors, preset, new TestRun()) { Session = Session };
         var run = new AutoRunWindow(context, steps ?? AutomaticSteps()) { Owner = this };
         configure?.Invoke(run);
         IsEnabled = false;

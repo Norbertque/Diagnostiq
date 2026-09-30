@@ -1,3 +1,4 @@
+using Diagnostiq.Core.Formatting;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
