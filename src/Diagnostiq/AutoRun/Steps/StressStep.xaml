@@ -13,12 +13,11 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel VerticalAlignment="Bottom">
                     <TextBlock x:Name="Heading" Style="{StaticResource Diag.Text.Title}" Text="Stress test" AutomationProperties.HeadingLevel="Level1" />
-                    <TextBlock x:Name="Intro" Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="0,6,24,0" MaxWidth="760" HorizontalAlignment="Left" />
+                    <TextBlock x:Name="Intro" Style="{StaticResource Diag.Text.Instruction}"
+                               Margin="0,6,24,0" MaxWidth="880" HorizontalAlignment="Left" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" VerticalAlignment="Bottom">
-                    <TextBlock x:Name="Remaining" Style="{StaticResource Diag.Text.Display}" HorizontalAlignment="Right"
-                               AutomationProperties.Name="Time remaining" />
+                    <TextBlock x:Name="Remaining" Style="{StaticResource Diag.Text.Display}" HorizontalAlignment="Right" />
                     <TextBlock Style="{StaticResource Diag.Text.Caption}" Text="remaining" HorizontalAlignment="Right" />
                 </StackPanel>
             </Grid>
@@ -73,7 +72,7 @@
                     <StackPanel Grid.Column="1">
                         <TextBlock x:Name="BatteryTitle" Style="{StaticResource Diag.Text.BodyStrong}" Text="Optional: measure the battery under load" />
                         <TextBlock x:Name="BatteryText" Style="{StaticResource Diag.Text.Body}"
-                                   Text="Unplug the charger now and the rest of the run doubles as a battery drain test. You'll be asked to plug it back in later." />
+                                   Text="Unplug the charger now to measure how fast the battery drains under full load. Plug it back in when the test ends." />
                     </StackPanel>
                 </Grid>
             </Border>

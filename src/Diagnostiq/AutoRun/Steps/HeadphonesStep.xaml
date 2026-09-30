@@ -4,37 +4,45 @@
                xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                xmlns:auto="clr-namespace:Diagnostiq.AutoRun"
                xmlns:c="clr-namespace:Diagnostiq.Controls">
-    <StackPanel MaxWidth="880" Margin="48" VerticalAlignment="Center">
-        <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Headphone jack" AutomationProperties.HeadingLevel="Level1" />
-        <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,6,0,24"
-                   Text="Plug headphones or earbuds into the headphone jack. The left and right tones play through them once they're detected. No jack on this laptop, or no headphones at hand? Choose Skip." />
+    <Grid MaxWidth="1240" Margin="48,32,48,32">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MaxWidth="880" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+            <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Headphone jack" AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock Style="{StaticResource Diag.Text.Instruction}" Margin="0,6,0,24"
+                       Text="Plug headphones or earbuds into the headphone jack. The left and right tones play through them once they're detected. No jack on this laptop, or no headphones at hand? Choose Skip (top right)." />
 
-        <Border Style="{StaticResource Diag.Card}" Padding="20,12">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <c:StatusIcon x:Name="JackIcon" Size="24" VerticalAlignment="Top" Margin="0,0,12,0" />
-                <StackPanel Grid.Column="1">
-                    <TextBlock x:Name="JackTitle" Style="{StaticResource Diag.Text.BodyStrong}" Text="Waiting for headphones…" />
-                    <TextBlock x:Name="JackText" Style="{StaticResource Diag.Text.Body}"
-                               Text="Some laptops don't report the jack to Windows. If nothing changes, play the tones below anyway." />
+            <Border Style="{StaticResource Diag.Card}" Padding="20,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <c:StatusIcon x:Name="JackIcon" Size="24" VerticalAlignment="Top" Margin="0,0,12,0" />
+                    <StackPanel Grid.Column="1">
+                        <TextBlock x:Name="JackTitle" Style="{StaticResource Diag.Text.BodyStrong}" Text="Waiting for headphones…" />
+                        <TextBlock x:Name="JackText" Style="{StaticResource Diag.Text.Body}"
+                                   Text="Some laptops don't report the jack to Windows. If nothing changes, play the tones below anyway." />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <UniformGrid Columns="3" Margin="0,16,-12,0">
+                <ui:Button x:Name="LeftButton" Content="Left" Icon="{ui:SymbolIcon Headphones24}" MinHeight="64" Margin="0,0,12,0"
+                           HorizontalAlignment="Stretch" Click="Left_Click" />
+                <ui:Button x:Name="RightButton" Content="Right" Icon="{ui:SymbolIcon Headphones24}" MinHeight="64" Margin="0,0,12,0"
+                           HorizontalAlignment="Stretch" Click="Right_Click" />
+                <ui:Button x:Name="SweepButton" Content="Sweep" Icon="{ui:SymbolIcon ArrowTrendingLines24}" MinHeight="64" Margin="0,0,12,0"
+                           HorizontalAlignment="Stretch" Click="Sweep_Click" />
+            </UniformGrid>
+
+            <Border Style="{StaticResource Diag.Card}" Margin="0,24,0,0">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" Text="Did each tone play in the correct ear, without crackling when you wiggle the plug?" />
+                    <TextBlock Style="{StaticResource Diag.Text.Body}" Margin="0,4,0,0" Text="Replay them with the buttons above, then choose Pass or Fail (top right)." />
                 </StackPanel>
-            </Grid>
-        </Border>
-
-        <UniformGrid Columns="3" Margin="0,16,-12,0">
-            <ui:Button x:Name="LeftButton" Content="Left" Icon="{ui:SymbolIcon Headphones24}" MinHeight="64" Margin="0,0,12,0"
-                       HorizontalAlignment="Stretch" Focusable="False" Click="Left_Click" />
-            <ui:Button x:Name="RightButton" Content="Right" Icon="{ui:SymbolIcon Headphones24}" MinHeight="64" Margin="0,0,12,0"
-                       HorizontalAlignment="Stretch" Focusable="False" Click="Right_Click" />
-            <ui:Button x:Name="SweepButton" Content="Sweep" Icon="{ui:SymbolIcon ArrowTrendingLines24}" MinHeight="64" Margin="0,0,12,0"
-                       HorizontalAlignment="Stretch" Focusable="False" Click="Sweep_Click" />
-        </UniformGrid>
-
-        <Border Style="{StaticResource Diag.Card}" Margin="0,24,0,0">
-            <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" Text="Did each tone play in the right ear, without crackling when you wiggle the plug?" />
-        </Border>
-    </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
 </auto:StepView>

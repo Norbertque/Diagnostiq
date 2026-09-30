@@ -3,23 +3,28 @@
                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                xmlns:auto="clr-namespace:Diagnostiq.AutoRun"
                xmlns:c="clr-namespace:Diagnostiq.Controls">
-    <StackPanel MaxWidth="960" Margin="48,48,48,32" VerticalAlignment="Center">
-        <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Disk speed" AutomationProperties.HeadingLevel="Level1" />
-        <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,6,0,24"
-                   Text="Writes and reads a 1 GB test file on the system disk, bypassing Windows' cache, then deletes it. Your files aren't touched." />
-        <Grid Margin="0,0,0,24">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <ProgressBar x:Name="Bar" Height="4" Maximum="1" VerticalAlignment="Center" AutomationProperties.Name="Disk speed test progress" />
-            <TextBlock x:Name="Phase" Grid.Column="1" Style="{StaticResource Diag.Text.Caption}" Margin="12,0,0,0" MinWidth="140"
-                       VerticalAlignment="Center" Text="Preparing…" />
-        </Grid>
-        <c:ColumnsPanel Columns="3" Margin="0,0,-12,0">
-            <c:MetricCard x:Name="ReadCard" Label="Sequential read" Icon="ArrowDownload24" />
-            <c:MetricCard x:Name="WriteCard" Label="Sequential write" Icon="ArrowUpload24" />
-            <c:MetricCard x:Name="RandomCard" Label="Random 4K reads" Icon="DataHistogram24" />
-        </c:ColumnsPanel>
-    </StackPanel>
+    <Grid MaxWidth="1240" Margin="48,32,48,32">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MaxWidth="880" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+            <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Disk speed" AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock Style="{StaticResource Diag.Text.Instruction}" Margin="0,6,0,24"
+                       Text="Writes and reads a 1 GB test file on the system disk, bypassing Windows' cache, then deletes it. Your files aren't touched." />
+            <Grid Margin="0,0,0,24">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ProgressBar x:Name="Bar" Height="4" Maximum="1" VerticalAlignment="Center" AutomationProperties.Name="Disk speed test progress" />
+                <TextBlock x:Name="Phase" Grid.Column="1" Style="{StaticResource Diag.Text.Caption}" Margin="12,0,0,0" MinWidth="140"
+                           VerticalAlignment="Center" Text="Preparing…" />
+            </Grid>
+            <c:ColumnsPanel Columns="3" Margin="0,0,-12,0">
+                <c:MetricCard x:Name="ReadCard" Label="Sequential read" Icon="ArrowDownload24" />
+                <c:MetricCard x:Name="WriteCard" Label="Sequential write" Icon="ArrowUpload24" />
+                <c:MetricCard x:Name="RandomCard" Label="Random 4K reads" Icon="DataHistogram24" />
+            </c:ColumnsPanel>
+        </StackPanel>
+    </Grid>
 </auto:StepView>

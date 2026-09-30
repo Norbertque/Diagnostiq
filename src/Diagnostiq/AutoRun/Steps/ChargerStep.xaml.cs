@@ -12,6 +12,7 @@ public partial class ChargerStep : StepView
 {
     private ChargerWatcher? _watcher;
     private bool _sawUnplug, _sawPlug, _finishing;
+    private int _plugs;
     private string? _chargeDetail;
 
     public ChargerStep() => InitializeComponent();
@@ -34,9 +35,22 @@ public partial class ChargerStep : StepView
 
     private async void OnAcChanged(bool onAc)
     {
-        if (!onAc) { _sawUnplug = true; Refresh(); return; }
+        if (!onAc)
+        {
+            _sawUnplug = true;
+            if (!_finishing)
+            {
+                // Unplugged again after "not charging" (a cable check): start the plug-in half over.
+                _sawPlug = false;
+                _chargeDetail = null;
+                Ctx.Suggest(null);
+            }
+            Refresh();
+            return;
+        }
         if (!_sawUnplug) return;   // plugged in before being unplugged: nothing new
         _sawPlug = true;
+        int plug = ++_plugs;
         PlugText.Text = "Checking that it charges…";
         Refresh();
 
@@ -45,9 +59,11 @@ public partial class ChargerStep : StepView
         for (int i = 0; i < 8; i++)
         {
             await Task.Delay(TimeSpan.FromSeconds(1));
-            live = await Task.Run(() => { try { return BatteryLiveProbe.Read(); } catch (System.Management.ManagementException) { return null; } });
+            live = await Task.Run(ReadBattery);
             if (live?.Charging == true || live?.ChargePercent >= 99) break;
         }
+        // The step ended while waiting (its verdict is already in), or the charger was pulled or replugged meanwhile.
+        if (_watcher is null || plug != _plugs || !_sawPlug) return;
         _chargeDetail = live switch
         {
             { Charging: true, ChargeRateMw: > 0 } l => $"charging at {l.ChargeRateMw / 1000.0:0} W",
@@ -56,6 +72,13 @@ public partial class ChargerStep : StepView
             _ => "Windows reports it plugged in but not charging",
         };
         Refresh();
+    }
+
+    /// <summary>WMI can refuse mid-replug (or while its service restarts); that just means no reading this time.</summary>
+    private static BatteryLive? ReadBattery()
+    {
+        try { return BatteryLiveProbe.Read(); }
+        catch (Exception ex) when (ex is System.Management.ManagementException or System.Runtime.InteropServices.COMException) { return null; }
     }
 
     private void Refresh()
@@ -69,20 +92,24 @@ public partial class ChargerStep : StepView
 
         Instruction.Text = !_sawUnplug ? "Unplug the charger."
                          : !_sawPlug ? "Now plug the charger back in."
-                         : charging ? "The charger works." : "Plugged in.";
+                         : charging ? "The charger works."
+                         : _chargeDetail is null ? "Plugged in."
+                         : "Plugged in, but not charging. Check the connector and cable, or try another outlet. " +
+                           "If it still won't charge, choose Fail (top right).";
 
-        if (_sawUnplug && _sawPlug && _chargeDetail is not null && !_finishing)
+        if (_sawUnplug && _sawPlug && _chargeDetail is not null)
         {
-            _finishing = true;
-            if (charging) { Ctx.Suggest(TestOutcome.Pass); _ = FinishSoonAsync(); }
-            else Ctx.Suggest(TestOutcome.Fail);
+            // Not charging is only suggested: replugging after a cable check can still turn it into a pass.
+            if (charging && !_finishing) { _finishing = true; Ctx.Suggest(TestOutcome.Pass); _ = FinishSoonAsync(); }
+            else if (!charging) Ctx.Suggest(TestOutcome.Fail);
         }
     }
 
     private async Task FinishSoonAsync()
     {
+        var judge = Ctx.JudgeCurrentStep();   // not whatever step is showing in 2 s
         await Task.Delay(TimeSpan.FromSeconds(2));
-        Ctx.Judge(TestOutcome.Pass);
+        judge(TestOutcome.Pass);
     }
 
     protected override string? Detail(TestOutcome outcome) => outcome switch

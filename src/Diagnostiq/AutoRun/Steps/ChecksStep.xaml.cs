@@ -10,7 +10,7 @@ public partial class ChecksStep : StepView
     public ChecksStep() => InitializeComponent();
 
     public override string Id => TestIds.Network;
-    public override string Title => "Quick checks";
+    public override string Title => "Wi-Fi and internet";   // the same name as its result and the Manual test card
     public override StepMode Mode => StepMode.Automatic;
 
     protected override async Task OnRunAsync(CancellationToken ct)

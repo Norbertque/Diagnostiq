@@ -30,7 +30,8 @@ public partial class TouchpadStep : StepView
         Cells.Rows = Rows;
         for (int i = 0; i < _cells.Length; i++)
         {
-            _cells[i] = new Rectangle { Margin = new Thickness(1) };
+            // Covered cells get the success colour at 75%: strong enough that dead zones stand out as gaps.
+            _cells[i] = new Rectangle { Margin = new Thickness(1), Opacity = 0.75 };
             Cells.Children.Add(_cells[i]);
         }
     }
@@ -62,7 +63,7 @@ public partial class TouchpadStep : StepView
         if (_visited[i]) return;
         _visited[i] = true;
         _visitedCount++;
-        _cells[i].SetResourceReference(Shape.FillProperty, "SystemFillColorSuccessBackgroundBrush");
+        _cells[i].SetResourceReference(Shape.FillProperty, "SystemFillColorSuccessBrush");
         Update();
     }
 
@@ -100,8 +101,9 @@ public partial class TouchpadStep : StepView
 
     private async Task FinishSoonAsync()
     {
+        var judge = Ctx.JudgeCurrentStep();   // not whatever step is showing in 2 s
         await Task.Delay(TimeSpan.FromSeconds(2));
-        Ctx.Judge(TestOutcome.Pass);
+        judge(TestOutcome.Pass);
     }
 
     protected override string? Detail(TestOutcome outcome)

@@ -28,6 +28,16 @@ public sealed class AutoRunContext(SystemSnapshot snapshot, SensorService? senso
     /// <summary>Records the verdict for the current judged step (from the top bar or the step itself).</summary>
     public void Judge(TestOutcome outcome) => _judgement?.TrySetResult(outcome);
 
+    /// <summary>
+    /// Binds a later self-judgement to the verdict pending now, so it can't land on the next step
+    /// (the user may click Pass or Skip before a step's own "moving on" delay runs out).
+    /// </summary>
+    public Action<TestOutcome> JudgeCurrentStep()
+    {
+        var pending = _judgement;
+        return outcome => pending?.TrySetResult(outcome);
+    }
+
     public void Suggest(TestOutcome? outcome) => Suggested?.Invoke(outcome);
 
     /// <summary>False only for dev snapshots: steps then skip the keyboard hook, sound, microphone and camera.</summary>

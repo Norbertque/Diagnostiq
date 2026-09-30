@@ -16,6 +16,7 @@ public partial class MicrophoneStep : StepView
     private float _shownLevel;
     private bool _heard, _playedBack, _silentRecording;
     private System.Windows.Threading.DispatcherTimer? _silenceHint;
+    private CancellationTokenSource? _stopPlayback;
 
     public MicrophoneStep() => InitializeComponent();
 
@@ -58,6 +59,7 @@ public partial class MicrophoneStep : StepView
 
     private void OnLevel(float level)
     {
+        if (_mic is null) return;   // queued before the step ended: must not suggest a verdict for the next one
         // Fast attack, slow release, so short sounds stay visible.
         _shownLevel = level > _shownLevel ? level : _shownLevel * 0.85f;
         if (LevelFill.Parent is Border track) LevelFill.Width = Math.Min(_shownLevel * 2.5, 1) * track.ActualWidth;
@@ -73,17 +75,23 @@ public partial class MicrophoneStep : StepView
 
     private async void Record_Click(object sender, RoutedEventArgs e)
     {
-        if (_mic is null) return;
+        // Pass, Fail or Skip can end the step (and dispose the recorder) during either await.
+        var mic = _mic;
+        if (mic is null) return;
         RecordButton.IsEnabled = false;
         RecordButton.Content = "Recording…";
         RecordIcon.State = null;
-        await _mic.RecordAsync(RecordLength);
+        await mic.RecordAsync(RecordLength);
+        if (_mic != mic) return;
 
-        _silentRecording = _mic.RecordedPeak < MicRecorder.SilenceThreshold;
+        _silentRecording = mic.RecordedPeak < MicRecorder.SilenceThreshold;
         RecordButton.Content = "Playing back…";
         RecordText.Text = "Playing back…";
-        try { await _mic.PlayBackAsync(); }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException) { }
+        _stopPlayback = new CancellationTokenSource();
+        try { await mic.PlayBackAsync(_stopPlayback.Token); }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException
+                                      or ObjectDisposedException or OperationCanceledException) { }
+        if (_mic != mic) return;
 
         _playedBack = true;
         RecordIcon.State = _silentRecording ? CheckState.Warn : CheckState.Pass;
@@ -112,6 +120,7 @@ public partial class MicrophoneStep : StepView
     public override void Cleanup()
     {
         _silenceHint?.Stop();
+        _stopPlayback?.Cancel();   // don't play the recording over the next step
         _mic?.Dispose();
         _mic = null;
     }

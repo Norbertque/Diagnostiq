@@ -15,7 +15,7 @@
 
         <StackPanel Grid.ColumnSpan="2" Margin="0,0,0,24">
             <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Touchpad" AutomationProperties.HeadingLevel="Level1" />
-            <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,6,0,0"
+            <TextBlock Style="{StaticResource Diag.Text.Instruction}" Margin="0,6,0,0" MaxWidth="880" HorizontalAlignment="Left"
                        Text="Use the touchpad, not a mouse. Move the pointer over the whole area until it fills in, then click both buttons (or tap with one and two fingers) and scroll up, down and sideways with two fingers." />
         </StackPanel>
 
@@ -27,7 +27,7 @@
         </Border>
 
         <StackPanel Grid.Row="1" Grid.Column="1" Margin="24,0,0,0">
-            <TextBlock x:Name="Coverage" Style="{StaticResource Diag.Text.Display}" Text="0%" AutomationProperties.Name="Surface covered" />
+            <TextBlock x:Name="Coverage" Style="{StaticResource Diag.Text.Display}" Text="0%" />
             <TextBlock Style="{StaticResource Diag.Text.Caption}" Text="of the surface covered" Margin="0,0,0,20" />
             <Border Style="{StaticResource Diag.Card}" Padding="16,4">
                 <StackPanel>

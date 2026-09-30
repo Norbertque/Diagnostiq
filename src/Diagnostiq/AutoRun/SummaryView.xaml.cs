@@ -16,6 +16,9 @@ public partial class SummaryView : UserControl
 {
     private SavedReport? _saved;
 
+    /// <summary>The one-line verdict ("2 problems found"), for the window to announce.</summary>
+    public string Headline => Heading.Text;
+
     /// <param name="session">Earlier manual results, included in the score and the report.</param>
     public SummaryView(TestRun run, SystemSnapshot snapshot, TestRun? session = null, bool saveReport = true)
     {
@@ -28,8 +31,9 @@ public partial class SummaryView : UserControl
 
         Heading.Text = fail > 0 ? $"{fail} problem{(fail == 1 ? "" : "s")} found"
                      : warn > 0 ? "Working, with a few things to check"
+                     : pass == 0 ? "Nothing was tested"
                      : "Everything tested works";
-        Subheading.Text = $"{snapshot.Device?.DisplayName ?? "This laptop"} · {results.Count} tests · " +
+        Subheading.Text = $"{snapshot.Device?.DisplayName ?? "This laptop"} · {results.Count} test{(results.Count == 1 ? "" : "s")} · " +
                           Format.Minutes(DateTimeOffset.Now - run.Started);
 
         var all = session is null ? run : Reports.Combine(session, run);
@@ -57,7 +61,8 @@ public partial class SummaryView : UserControl
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             ReportTitle.Text = "Couldn't save the report";
-            ReportPath.Text = ex.Message;
+            ReportPath.Text = $"{ex.Message} Check that the drive has free space and isn't write-protected.";
+            ReportPath.TextTrimming = TextTrimming.None;   // the whole reason, not just the start of it
         }
     }
 
@@ -75,5 +80,9 @@ public partial class SummaryView : UserControl
         public TestOutcome Outcome => Result.Outcome;
         public string Title => Result.Title;
         public string DetailText => Result.Detail ?? (Result.Outcome == TestOutcome.Skipped ? "Skipped." : "");
+
+        /// <summary>What screen readers announce for the row (the status is otherwise only an icon).</summary>
+        public override string ToString() =>
+            string.IsNullOrEmpty(Result.Detail) ? $"{Title}: {Outcomes.Label(Outcome)}." : $"{Title}: {Outcomes.Label(Outcome)}. {Result.Detail}";
     }
 }

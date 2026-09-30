@@ -13,7 +13,8 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Top bar: where you are, verdict buttons, exit. Mouse/touchpad only: keys are for testing. -->
+        <!-- Top bar: where you are, verdict buttons, exit. Keyboard-reachable too; the keyboard slide's
+             hook swallows every key, so pressing keys there can't trigger them. -->
         <Border x:Name="TopBar" Background="{DynamicResource LayerFillColorDefaultBrush}"
                 BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" Padding="24,12">
             <Grid>
@@ -29,20 +30,24 @@
                     <TextBlock x:Name="StepTitle" Style="{StaticResource Diag.Text.Subtitle}" FontSize="18" LineHeight="24" />
                 </StackPanel>
 
-                <StackPanel x:Name="Segments" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center"
-                            VerticalAlignment="Center" Margin="24,0" AutomationProperties.Name="Progress through the steps" />
+                <!-- Shrinks on narrow screens rather than being cut off by the verdict buttons. -->
+                <Viewbox x:Name="SegmentsBox" Grid.Column="1" Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Center"
+                         VerticalAlignment="Center" Margin="24,0">
+                    <StackPanel x:Name="Segments" Orientation="Horizontal" />
+                </Viewbox>
 
+                <!-- Big and far apart, with coloured icons, so Fail isn't hit when Pass (or Exit) was meant. -->
                 <StackPanel x:Name="VerdictButtons" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <ui:Button x:Name="FailButton" Content="Fail" Icon="{ui:SymbolIcon Dismiss24}" MinWidth="96" MinHeight="40"
-                               Click="Fail_Click" Focusable="False" />
-                    <ui:Button x:Name="SkipButton" Content="Skip" Appearance="Transparent" MinWidth="80" MinHeight="40" Margin="8,0"
-                               Click="Skip_Click" Focusable="False" />
-                    <ui:Button x:Name="PassButton" Content="Pass" Icon="{ui:SymbolIcon Checkmark24}" MinWidth="96" MinHeight="40"
-                               Click="Pass_Click" Focusable="False" />
+                    <ui:Button x:Name="FailButton" Content="Fail" Icon="{ui:SymbolIcon DismissCircle24}" MinWidth="120" MinHeight="48"
+                               FontSize="16" Click="Fail_Click" />
+                    <ui:Button x:Name="SkipButton" Content="Skip" Icon="{ui:SymbolIcon Next24}" Appearance="Transparent" MinWidth="120"
+                               MinHeight="48" FontSize="16" Margin="8,0" Click="Skip_Click" />
+                    <ui:Button x:Name="PassButton" Content="Pass" Icon="{ui:SymbolIcon CheckmarkCircle24}" MinWidth="120" MinHeight="48"
+                               FontSize="16" Click="Pass_Click" />
                 </StackPanel>
 
-                <ui:Button x:Name="ExitButton" Grid.Column="3" Content="Exit" Appearance="Transparent" Icon="{ui:SymbolIcon Dismiss24}"
-                           MinHeight="40" Margin="24,0,0,0" VerticalAlignment="Center" Click="Exit_Click" Focusable="False" />
+                <ui:Button x:Name="ExitButton" Grid.Column="3" Content="Exit" Appearance="Transparent" Icon="{ui:SymbolIcon SignOut24}"
+                           MinHeight="40" Margin="24,0,0,0" VerticalAlignment="Center" Click="Exit_Click" />
             </Grid>
         </Border>
 

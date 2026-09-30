@@ -27,8 +27,9 @@
                     </StackPanel>
                     <StackPanel x:Name="ReportActions" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0"
                                 Visibility="Collapsed">
-                        <ui:Button Appearance="Primary" Content="Open report" Icon="{ui:SymbolIcon Open24}" Click="OpenReport_Click" />
-                        <ui:Button Content="Show in folder" Margin="8,0,0,0" Click="ShowFolder_Click" />
+                        <ui:Button Appearance="Primary" Content="Open report" Icon="{ui:SymbolIcon Open24}" MinHeight="40" Padding="16,8"
+                                   Click="OpenReport_Click" />
+                        <ui:Button Content="Show in folder" MinHeight="40" Padding="16,8" Margin="8,0,0,0" Click="ShowFolder_Click" />
                     </StackPanel>
                 </Grid>
             </Border>

@@ -4,41 +4,46 @@
                xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                xmlns:auto="clr-namespace:Diagnostiq.AutoRun"
                xmlns:c="clr-namespace:Diagnostiq.Controls">
-    <StackPanel MaxWidth="880" Margin="48" VerticalAlignment="Center">
-        <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Speakers" AutomationProperties.HeadingLevel="Level1" />
-        <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,6,0,8"
-                   Text="Unplug any headphones first. A tone plays on the left, then on the right, then a sweep from a low hum to a high whistle. Listen for sound on the wrong side, crackling, rattling or buzzing." />
-        <TextBlock x:Name="DeviceText" Style="{StaticResource Diag.Text.Caption}" Margin="0,0,0,16" />
+    <Grid MaxWidth="1240" Margin="48,32,48,32">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MaxWidth="880" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+            <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Speakers" AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock Style="{StaticResource Diag.Text.Instruction}" Margin="0,6,0,8"
+                       Text="Unplug any headphones first. A tone plays on the left, then on the right, then a sweep from a low hum to a high whistle. Listen for sound on the wrong side, crackling, rattling or buzzing." />
+            <TextBlock x:Name="DeviceText" Style="{StaticResource Diag.Text.Caption}" Margin="0,0,0,16" />
 
-        <Border x:Name="VolumeBanner" Style="{StaticResource Diag.Banner.Warn}" Visibility="Collapsed">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <c:StatusIcon State="Warn" Margin="0,0,12,0" VerticalAlignment="Center" />
-                <TextBlock x:Name="VolumeText" Grid.Column="1" Style="{StaticResource Diag.Text.Body}" VerticalAlignment="Center" />
-                <ui:Button Grid.Column="2" Content="Set volume to 60%" Margin="12,0,0,0" Focusable="False" Click="SetVolume_Click" />
-            </Grid>
-        </Border>
+            <Border x:Name="VolumeBanner" Style="{StaticResource Diag.Banner.Warn}" Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <c:StatusIcon State="Warn" Margin="0,0,12,0" VerticalAlignment="Center" />
+                    <TextBlock x:Name="VolumeText" Grid.Column="1" Style="{StaticResource Diag.Text.Body}" VerticalAlignment="Center" />
+                    <ui:Button Grid.Column="2" Content="Set volume to 60%" Margin="12,0,0,0" Click="SetVolume_Click" />
+                </Grid>
+            </Border>
 
-        <UniformGrid Columns="4" Margin="0,8,-12,0">
-            <ui:Button x:Name="LeftButton" Content="Left" Icon="{ui:SymbolIcon Speaker224}" MinHeight="64" Margin="0,0,12,0"
-                       HorizontalAlignment="Stretch" Focusable="False" Click="Left_Click" />
-            <ui:Button x:Name="RightButton" Content="Right" Icon="{ui:SymbolIcon Speaker224}" MinHeight="64" Margin="0,0,12,0"
-                       HorizontalAlignment="Stretch" Focusable="False" Click="Right_Click" />
-            <ui:Button x:Name="BothButton" Content="Both" Icon="{ui:SymbolIcon Speaker224}" MinHeight="64" Margin="0,0,12,0"
-                       HorizontalAlignment="Stretch" Focusable="False" Click="Both_Click" />
-            <ui:Button x:Name="SweepButton" Content="Sweep" Icon="{ui:SymbolIcon ArrowTrendingLines24}" MinHeight="64" Margin="0,0,12,0"
-                       HorizontalAlignment="Stretch" Focusable="False" Click="Sweep_Click" />
-        </UniformGrid>
+            <UniformGrid Columns="4" Margin="0,8,-12,0">
+                <ui:Button x:Name="LeftButton" Content="Left" Icon="{ui:SymbolIcon Speaker224}" MinHeight="64" Margin="0,0,12,0"
+                           HorizontalAlignment="Stretch" Click="Left_Click" />
+                <ui:Button x:Name="RightButton" Content="Right" Icon="{ui:SymbolIcon Speaker224}" MinHeight="64" Margin="0,0,12,0"
+                           HorizontalAlignment="Stretch" Click="Right_Click" />
+                <ui:Button x:Name="BothButton" Content="Both" Icon="{ui:SymbolIcon Speaker224}" MinHeight="64" Margin="0,0,12,0"
+                           HorizontalAlignment="Stretch" Click="Both_Click" />
+                <ui:Button x:Name="SweepButton" Content="Sweep" Icon="{ui:SymbolIcon ArrowTrendingLines24}" MinHeight="64" Margin="0,0,12,0"
+                           HorizontalAlignment="Stretch" Click="Sweep_Click" />
+            </UniformGrid>
 
-        <Border Style="{StaticResource Diag.Card}" Margin="0,24,0,0">
-            <StackPanel>
-                <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" Text="Did each sound come from the right side, clean and without rattling?" />
-                <TextBlock Style="{StaticResource Diag.Text.Body}" Margin="0,4,0,0" Text="Replay any of them with the buttons above, then choose Pass or Fail." />
-            </StackPanel>
-        </Border>
-    </StackPanel>
+            <Border Style="{StaticResource Diag.Card}" Margin="0,24,0,0">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" Text="Did each sound come from the correct side, clean and without rattling?" />
+                    <TextBlock Style="{StaticResource Diag.Text.Body}" Margin="0,4,0,0" Text="Replay any of them with the buttons above, then choose Pass or Fail (top right)." />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
 </auto:StepView>
