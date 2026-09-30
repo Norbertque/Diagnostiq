@@ -4,8 +4,10 @@ Portable Windows tool that checks any laptop (Dell, Lenovo, HP, ASUS, …): spec
 Windows 11 readiness, battery, storage health, stability under load, display, keyboard,
 touchpad, audio, webcam, USB and network, with a printable report at the end.
 
-> **Status:** v2 is being rebuilt in WPF. The previous WinForms version (Dell refurbishment
-> edition with Excel inventory import) is preserved at tag **`v1.0-refurb`**.
+> **Status:** v2 is being rebuilt in WPF. Working so far: hardware detection, Windows 11
+> readiness, the startup splash and loading screen, and the Home screen. Automatic and Manual
+> test modes come next. The previous WinForms version (Dell refurbishment edition with Excel
+> inventory import) is preserved at tag **`v1.0-refurb`**.
 
 ## Layout
 

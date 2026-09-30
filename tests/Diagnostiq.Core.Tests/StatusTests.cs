@@ -47,8 +47,8 @@ public class StatusTests
         Assert.Equal(expected, WindowsStatus.ProductName(registry, build));
 
     [Theory]
-    [InlineData("[4.0] Professional OEM:DM", "Professional")]
-    [InlineData("[4.0] Core OEM:DM", "Core")]
+    [InlineData("[4.0] Professional OEM:DM", "Pro")]
+    [InlineData("[4.0] Core OEM:DM", "Home")]
     [InlineData("", null)]
     [InlineData(null, null)]
     public void Firmware_key_edition(string? description, string? expected) =>

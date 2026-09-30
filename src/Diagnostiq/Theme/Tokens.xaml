@@ -117,6 +117,25 @@
         <Setter Property="Padding" Value="24" />
     </Style>
 
+    <!-- Banners: full-width notices above page content (limited mode, sensor driver). Text inside uses the normal
+         primary/secondary text brushes, which keep >= 4.5:1 on these tinted backgrounds. -->
+    <Style x:Key="Diag.Banner" TargetType="Border">
+        <Setter Property="CornerRadius" Value="{StaticResource Diag.Radius.Card}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="Padding" Value="16,12" />
+        <Setter Property="Margin" Value="0,0,0,12" />
+    </Style>
+    <Style x:Key="Diag.Banner.Warn" TargetType="Border" BasedOn="{StaticResource Diag.Banner}">
+        <Setter Property="Background" Value="{DynamicResource SystemFillColorCautionBackgroundBrush}" />
+    </Style>
+    <Style x:Key="Diag.Banner.Info" TargetType="Border" BasedOn="{StaticResource Diag.Banner}">
+        <Setter Property="Background" Value="{DynamicResource SystemFillColorAttentionBackgroundBrush}" />
+    </Style>
+    <Style x:Key="Diag.Banner.Pass" TargetType="Border" BasedOn="{StaticResource Diag.Banner}">
+        <Setter Property="Background" Value="{DynamicResource SystemFillColorSuccessBackgroundBrush}" />
+    </Style>
+
     <!-- Status pills: Border + TextBlock pairs. All fg/bg pairs verified >= 4.5:1 in both themes. -->
     <Style x:Key="Diag.Pill" TargetType="Border">
         <Setter Property="CornerRadius" Value="{StaticResource Diag.Radius.Pill}" />

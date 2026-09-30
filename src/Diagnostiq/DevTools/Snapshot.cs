@@ -3,22 +3,23 @@ using System.IO;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 
 namespace Diagnostiq.DevTools;
 
 /// <summary>
-/// Debug-only: <c>Diagnostiq.exe --snapshot out.png [--theme light|dark] [--size 1280x800]</c>
-/// renders the main window to a PNG and exits, so layouts can be checked in both
-/// themes and at several sizes without driving the desktop.
+/// Debug-only: <c>Diagnostiq.exe --snapshot out.png [--theme light|dark] [--size 1280x800] [--view loading|home|win11]</c>
+/// renders a view of the main window to a PNG and exits, so layouts can be checked in both
+/// themes and at several sizes without driving the desktop. The hardware probes run for real.
 /// Mica can't be captured by RenderTargetBitmap, so snapshots use a solid backdrop.
 /// </summary>
 internal static class Snapshot
 {
-    public static bool TryParse(string[] args, out string path, out ApplicationTheme theme, out Size size)
+    public static bool TryParse(string[] args, out string path, out ApplicationTheme theme, out Size size, out string view)
     {
-        path = ""; theme = ApplicationTheme.Light; size = new Size(1280, 800);
+        path = ""; theme = ApplicationTheme.Light; size = new Size(1280, 800); view = "home";
         int i = Array.IndexOf(args, "--snapshot");
         if (i < 0 || i + 1 >= args.Length) return false;
         path = Path.GetFullPath(args[i + 1]);
@@ -34,11 +35,19 @@ internal static class Snapshot
             if (parts.Length == 2 && double.TryParse(parts[0], out var w) && double.TryParse(parts[1], out var h))
                 size = new Size(w, h);
         }
+
+        int v = Array.IndexOf(args, "--view");
+        if (v >= 0 && v + 1 < args.Length) view = args[v + 1].ToLowerInvariant();
+        _fullPage = args.Contains("--full");
         return true;
     }
 
-    public static void Capture(FluentWindow window, string path, ApplicationTheme theme, Size size)
+    // --full: render the whole scrollable page, not just what fits on screen (windows can't exceed the screen height).
+    private static bool _fullPage;
+
+    public static void Capture(MainWindow window, string path, ApplicationTheme theme, Size size, string view)
     {
+        window.AnimationsEnabled = false;
         window.WindowBackdropType = WindowBackdropType.None;
         window.WindowStartupLocation = WindowStartupLocation.Manual;
         window.Left = -10000;  // render off-screen; nothing flashes on the desktop
@@ -47,14 +56,55 @@ internal static class Snapshot
         ApplicationThemeManager.Apply(theme, WindowBackdropType.None, updateAccent: false);
         Theme.ThemeService.ApplyTokens(theme);
 
-        window.ContentRendered += (_, _) =>
+        window.ViewShown += name =>
         {
-            window.Dispatcher.InvokeAsync(() =>
+            switch (view, name)
             {
-                var root = (FrameworkElement)window.Content;
-                var bg = (Brush)Application.Current.Resources["SolidBackgroundFillColorBaseBrush"];
-                var dpi = VisualTreeHelper.GetDpi(window);
-                var bmp = new RenderTargetBitmap(
+                case ("loading", "LoadingView"):
+                    // Catch it mid-scan, with some steps ticked and some still running.
+                    var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+                    timer.Tick += (_, _) => { timer.Stop(); Save(window, path); };
+                    timer.Start();
+                    break;
+                case ("home", "HomeView"):
+                    Save(window, path);
+                    break;
+                case ("win11", "HomeView"):
+                    window.ShowWin11();
+                    break;
+                case ("win11", "Win11View"):
+                    Save(window, path);
+                    break;
+            }
+        };
+    }
+
+    private static void Save(MainWindow window, string path) =>
+        window.Dispatcher.InvokeAsync(() =>
+        {
+            var root = (FrameworkElement)window.Content;
+            var bg = (Brush)Application.Current.Resources["SolidBackgroundFillColorBaseBrush"];
+            var dpi = VisualTreeHelper.GetDpi(window);
+            RenderTargetBitmap bmp;
+
+            var page = _fullPage && window.Host.Content is System.Windows.Controls.UserControl { Content: System.Windows.Controls.ScrollViewer { Content: FrameworkElement c } } ? c : null;
+            if (page is not null)
+            {
+                // Render the page content at its full height. RenderTargetBitmap draws a visual at its
+                // offset inside the parent (margin + centering), and ancestors' clipping doesn't apply.
+                var offset = VisualTreeHelper.GetOffset(page);
+                double w = Math.Max(root.ActualWidth, offset.X + page.ActualWidth + page.Margin.Right);
+                double h = offset.Y + page.ActualHeight + page.Margin.Bottom;
+                var backdrop = new DrawingVisual();
+                using (var dc = backdrop.RenderOpen())
+                    dc.DrawRectangle(bg, null, new Rect(0, 0, w, h));
+                bmp = new RenderTargetBitmap((int)(w * dpi.DpiScaleX), (int)(h * dpi.DpiScaleY), dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+                bmp.Render(backdrop);
+                bmp.Render(page);
+            }
+            else
+            {
+                bmp = new RenderTargetBitmap(
                     (int)(root.ActualWidth * dpi.DpiScaleX), (int)(root.ActualHeight * dpi.DpiScaleY),
                     dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
                 // Render the element itself (a VisualBrush would stretch its overflow bounds
@@ -64,13 +114,12 @@ internal static class Snapshot
                     dc.DrawRectangle(bg, null, new Rect(0, 0, root.ActualWidth, root.ActualHeight));
                 bmp.Render(backdrop);
                 bmp.Render(root);
-                var encoder = new PngBitmapEncoder();
-                encoder.Frames.Add(BitmapFrame.Create(bmp));
-                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                using (var fs = File.Create(path)) encoder.Save(fs);
-                Application.Current.Shutdown();
-            }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
-        };
-    }
+            }
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bmp));
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            using (var fs = File.Create(path)) encoder.Save(fs);
+            Application.Current.Shutdown();
+        }, DispatcherPriority.ApplicationIdle);
 }
 #endif

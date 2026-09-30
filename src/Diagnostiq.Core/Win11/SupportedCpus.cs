@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Diagnostiq.Core.Hardware;
 
 namespace Diagnostiq.Core.Win11;
 
@@ -44,13 +45,8 @@ public static partial class SupportedCpus
     }
 
     /// <summary>"12th Gen Intel(R) Core(TM) i7-1265U CPU @ 1.80GHz" → "12th Gen Intel Core i7-1265U".</summary>
-    internal static string Clean(string raw)
-    {
-        var s = Trademarks().Replace(raw, " ");
-        s = ClockSuffix().Replace(s, " ");
-        s = Regex.Replace(s, @"\b(CPU|Processor)\b", " ", RegexOptions.IgnoreCase);
-        return Spaces().Replace(s, " ").Trim();
-    }
+    internal static string Clean(string raw) =>
+        Regex.Replace(Names.Clean(raw), @"\s*\bProcessor\b", "", RegexOptions.IgnoreCase).Trim();
 
     // ---------- Intel (series rules mirroring the published list) ----------
 
@@ -220,9 +216,6 @@ public static partial class SupportedCpus
 
     private static string Ordinal(int n) => n switch { 1 => "1st", 2 => "2nd", 3 => "3rd", _ => $"{n}th" };
 
-    [GeneratedRegex(@"\((R|TM|C)\)|®|™", RegexOptions.IgnoreCase)] private static partial Regex Trademarks();
-    [GeneratedRegex(@"@\s*[\d.]+\s*GHz", RegexOptions.IgnoreCase)] private static partial Regex ClockSuffix();
-    [GeneratedRegex(@"\s+")] private static partial Regex Spaces();
     [GeneratedRegex(@"Core\s+Ultra\s+X?\d\s+(?<n>\d)\d\d[A-Z]*", RegexOptions.IgnoreCase)] private static partial Regex CoreUltra();
     [GeneratedRegex(@"\b(?<tier>i[3579]|m[357])-(?<num>\d{3,5})(?<suffix>[A-Z]*\d?)\b")] private static partial Regex CoreI();
     [GeneratedRegex(@"\bCore\s+[3579]\s+(?<n>\d)\d\d[A-Z]*\b", RegexOptions.IgnoreCase)] private static partial Regex CoreSeries();

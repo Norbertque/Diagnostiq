@@ -85,14 +85,28 @@ public static class WindowsStatus
         var c => c,
     };
 
-    /// <summary>"[4.0] Professional OEM:DM" → "Professional".</summary>
+    /// <summary>"[4.0] Professional OEM:DM" → "Pro".</summary>
     internal static string? FirmwareKeyEdition(string? description)
     {
         if (string.IsNullOrWhiteSpace(description)) return null;
         var parts = description.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var edition = parts.FirstOrDefault(p => !p.StartsWith('[') && !p.Contains(':'));
-        return edition ?? description.Trim();
+        return FriendlyEdition(edition ?? description.Trim());
     }
+
+    /// <summary>Internal edition IDs ("Core", "Professional") → the names on the box ("Home", "Pro").</summary>
+    public static string FriendlyEdition(string editionId) => editionId switch
+    {
+        "Core" => "Home",
+        "CoreSingleLanguage" => "Home Single Language",
+        "CoreCountrySpecific" => "Home China",
+        "Professional" => "Pro",
+        "ProfessionalEducation" => "Pro Education",
+        "ProfessionalWorkstation" => "Pro for Workstations",
+        "Enterprise" or "EnterpriseS" => editionId == "EnterpriseS" ? "Enterprise LTSC" : "Enterprise",
+        "Education" => "Education",
+        _ => editionId,
+    };
 
     /// <summary>Needs admin (the BitLocker WMI namespace refuses standard users).</summary>
     public static BitLockerInfo? ReadBitLocker()

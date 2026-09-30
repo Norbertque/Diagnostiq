@@ -1,0 +1,82 @@
+<UserControl x:Class="Diagnostiq.Views.Win11View"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:c="clr-namespace:Diagnostiq.Controls">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="{StaticResource Diag.Pad.Page}" MaxWidth="960">
+            <ui:Button x:Name="BackButton" Appearance="Transparent" Icon="{ui:SymbolIcon ArrowLeft24}" Content="Home"
+                       Margin="-8,0,0,12" Click="Back_Click" AutomationProperties.Name="Back to Home" />
+
+            <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Windows 11 requirements" AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,20"
+                       Text="What Windows 11 needs, checked against this laptop. Failed items show how to fix them where that's possible." />
+
+            <!-- Verdict -->
+            <Border Style="{StaticResource Diag.Card}" Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <c:StatusIcon State="{Binding Summary.State}" Size="32" VerticalAlignment="Top" Margin="0,0,16,0" />
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Style="{StaticResource Diag.Text.Subtitle}" Text="{Binding Summary.Headline}" AutomationProperties.HeadingLevel="Level2" />
+                        <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding Summary.Detail}" Margin="0,2,0,0" />
+                        <TextBlock x:Name="NoteText" Style="{StaticResource Diag.Text.Caption}" Text="{Binding Summary.Note}" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Requirements -->
+            <Border Style="{StaticResource Diag.Card}" Padding="20,8" Margin="0,0,0,12">
+                <ItemsControl x:Name="CheckList" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="200" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <c:StatusIcon State="{Binding State}" VerticalAlignment="Top" Margin="0,0,12,0" />
+                                <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.BodyStrong}" Text="{Binding Title}" Margin="0,0,16,0" />
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Style="{StaticResource Diag.Text.Body}" Text="{Binding Detail}" />
+                                    <Border Margin="0,8,0,0" Padding="12,8" CornerRadius="{StaticResource Diag.Radius.Control}"
+                                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                            Visibility="{Binding HintVisibility}">
+                                        <TextBlock Style="{StaticResource Diag.Text.Body}" TextWrapping="Wrap">
+                                            <Run Text="{Binding HintLabel, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="{Binding Hint, Mode=OneWay}" />
+                                        </TextBlock>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
+
+            <!-- Vendor note + firmware restart -->
+            <Border x:Name="FirmwareCard" Style="{StaticResource Diag.Card}" Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" Text="Getting into BIOS setup" />
+                        <TextBlock x:Name="KeysText" Style="{StaticResource Diag.Text.Body}" Margin="0,2,0,0" />
+                        <TextBlock x:Name="VendorNote" Style="{StaticResource Diag.Text.Body}" Margin="0,4,0,0"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                    <ui:Button x:Name="RestartFirmwareButton" Grid.Column="1" Content="Restart into BIOS setup" Margin="16,0,0,0"
+                               VerticalAlignment="Center" Icon="{ui:SymbolIcon ArrowClockwise24}" Click="RestartFirmware_Click" />
+                </Grid>
+            </Border>
+
+            <TextBlock x:Name="SourceText" Style="{StaticResource Diag.Text.Caption}" Margin="0,4,0,0" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

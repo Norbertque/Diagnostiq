@@ -3,47 +3,27 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="Diagnostiq"
-                 Width="1100" Height="720" MinWidth="900" MinHeight="600"
+                 Width="1180" Height="780" MinWidth="900" MinHeight="600"
                  WindowStartupLocation="CenterScreen"
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Mica"
                  WindowCornerPreference="Round">
-    <Grid>
+    <Grid x:Name="Root">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0" Title="Diagnostiq" />
+        <ui:TitleBar Grid.Row="0" Title="Diagnostiq">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="/Assets/icon.png" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
 
-        <!-- Phase 1 skeleton: shows the token system renders in both themes. -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="{StaticResource Diag.Pad.Page}">
-                <TextBlock Style="{StaticResource Diag.Text.TitleLarge}" Text="Diagnostiq" />
-                <TextBlock Style="{StaticResource Diag.Text.Caption}" Margin="0,4,0,24"
-                           Text="Skeleton build: design tokens and theme." />
+        <!-- Views (loading, home, details) are swapped in here by Navigate(). -->
+        <ContentControl x:Name="Host" Grid.Row="1" Focusable="False" IsTabStop="False" />
 
-                <Border Style="{StaticResource Diag.Card}" Margin="{StaticResource Diag.Gap.Stack}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource Diag.Text.Subtitle}" Text="Status pills" Margin="0,0,0,12" />
-                        <WrapPanel>
-                            <Border Style="{StaticResource Diag.Pill.Pass}" Margin="0,0,8,8"><TextBlock Text="Pass" FontSize="12" FontWeight="SemiBold" /></Border>
-                            <Border Style="{StaticResource Diag.Pill.Warn}" Margin="0,0,8,8"><TextBlock Text="Warning" FontSize="12" FontWeight="SemiBold" /></Border>
-                            <Border Style="{StaticResource Diag.Pill.Fail}" Margin="0,0,8,8"><TextBlock Text="Fail" FontSize="12" FontWeight="SemiBold" /></Border>
-                            <Border Style="{StaticResource Diag.Pill.Info}" Margin="0,0,8,8"><TextBlock Text="Running" FontSize="12" FontWeight="SemiBold" /></Border>
-                            <Border Style="{StaticResource Diag.Pill.Neutral}" Margin="0,0,8,8"><TextBlock Text="Not tested" FontSize="12" FontWeight="SemiBold" /></Border>
-                        </WrapPanel>
-                    </StackPanel>
-                </Border>
-
-                <Border Style="{StaticResource Diag.Card}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource Diag.Text.Caption}" Text="CPU PACKAGE" />
-                        <TextBlock Style="{StaticResource Diag.Text.Metric}" Text="72 °C" />
-                        <TextBlock Style="{StaticResource Diag.Text.Body}" Text="Body text uses Segoe UI Variable on Windows 11 and falls back to Segoe UI on Windows 10." />
-                    </StackPanel>
-                </Border>
-            </StackPanel>
-        </ScrollViewer>
+        <ui:SnackbarPresenter x:Name="SnackbarHost" Grid.Row="1" VerticalAlignment="Bottom" />
+        <ui:ContentDialogHost x:Name="DialogHost" Grid.Row="0" Grid.RowSpan="2" />
     </Grid>
 </ui:FluentWindow>

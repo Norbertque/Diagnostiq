@@ -1,0 +1,200 @@
+<UserControl x:Class="Diagnostiq.Views.HomeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:c="clr-namespace:Diagnostiq.Controls"
+             x:Name="Self">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="{StaticResource Diag.Pad.Page}" MaxWidth="1240">
+
+            <!-- ===== Header: what machine is this ===== -->
+            <TextBlock Style="{StaticResource Diag.Text.Title}" Text="{Binding DeviceName}"
+                       AutomationProperties.HeadingLevel="Level1" />
+            <StackPanel Orientation="Horizontal" Margin="0,2,0,20">
+                <TextBlock Style="{StaticResource Diag.Text.Body}" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Subtitle}" />
+                <ui:Button x:Name="CopySerialButton" Appearance="Transparent" Padding="6" Margin="6,0,0,0"
+                           Icon="{ui:SymbolIcon Copy24}" ToolTip="Copy serial number"
+                           AutomationProperties.Name="Copy serial number" Click="CopySerial_Click" />
+            </StackPanel>
+
+            <!-- ===== Banners ===== -->
+            <Border x:Name="AdminBanner" Style="{StaticResource Diag.Banner.Warn}" Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <c:StatusIcon State="Warn" VerticalAlignment="Top" Margin="0,1,12,0" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" Text="Limited mode" />
+                        <TextBlock Style="{StaticResource Diag.Text.Body}"
+                                   Text="Started without administrator rights, so TPM details, BitLocker, drive wear, exact temperatures and the disk surface scan aren't available." />
+                    </StackPanel>
+                    <ui:Button Grid.Column="2" Content="Restart as administrator" Margin="16,0,0,0" VerticalAlignment="Center"
+                               Click="RestartElevated_Click" />
+                </Grid>
+            </Border>
+
+            <Border x:Name="SensorBanner" Style="{StaticResource Diag.Banner.Info}" Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:SymbolIcon x:Name="SensorIcon" Symbol="Temperature24" FontSize="20" VerticalAlignment="Top" Margin="0,1,12,0"
+                                   Foreground="{DynamicResource Diag.InfoForegroundBrush}" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock x:Name="SensorTitle" Style="{StaticResource Diag.Text.BodyStrong}" Text="Get exact CPU temperatures" />
+                        <TextBlock x:Name="SensorMessage" Style="{StaticResource Diag.Text.Body}"
+                                   Text="Temperature and fan readings need the PawnIO sensor driver (signed, open source). Diagnostiq can install it now and offer to remove it when you close the app." />
+                    </StackPanel>
+                    <StackPanel x:Name="SensorActions" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                        <ui:Button x:Name="InstallSensorButton" Appearance="Primary" Content="Install driver" Click="InstallSensor_Click" />
+                        <ui:Button Appearance="Transparent" Content="Not now" Margin="8,0,0,0" Click="DismissSensor_Click" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ===== Primary choice: Automatic or Manual ===== -->
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{StaticResource Diag.Surface}">
+                    <DockPanel LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
+                            <Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource AccentFillColorDefaultBrush}">
+                                <ui:SymbolIcon Symbol="Play24" Filled="True" FontSize="20"
+                                               Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+                            </Border>
+                            <TextBlock Style="{StaticResource Diag.Text.Subtitle}" Text="Automatic check" Margin="12,0,0,0"
+                                       VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" />
+                        </StackPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Diag.Text.Body}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="Stress-tests the processor, memory and storage, then walks you through the screen, keyboard, touchpad, speakers, camera and ports. Runs fullscreen." />
+
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Diag.Text.BodyStrong}" Text="Stress test length" Margin="0,16,0,6" />
+                        <WrapPanel DockPanel.Dock="Top" x:Name="DurationChoices">
+                            <RadioButton x:Name="QuickRadio" GroupName="Duration" Content="Quick · 2 min" Margin="0,0,16,4" Checked="Duration_Checked" />
+                            <RadioButton x:Name="StandardRadio" GroupName="Duration" Content="Standard · 5 min" Margin="0,0,16,4" Checked="Duration_Checked" />
+                            <RadioButton x:Name="ExtendedRadio" GroupName="Duration" Content="Extended · 15 min" Margin="0,0,16,4" Checked="Duration_Checked" />
+                        </WrapPanel>
+                        <TextBlock DockPanel.Dock="Top" x:Name="TotalEstimate" Style="{StaticResource Diag.Text.Caption}" Margin="0,4,0,0" />
+
+                        <ui:Button DockPanel.Dock="Bottom" Appearance="Primary" Content="Start automatic check" Margin="0,20,0,0"
+                                   Icon="{ui:SymbolIcon Play24}" MinHeight="40" Padding="16,8" Click="StartAutomatic_Click" />
+                    </DockPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource Diag.Surface}">
+                    <DockPanel LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
+                            <Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                <ui:SymbolIcon Symbol="WrenchScrewdriver24" FontSize="20" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            </Border>
+                            <TextBlock Style="{StaticResource Diag.Text.Subtitle}" Text="Manual tests" Margin="12,0,0,0"
+                                       VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" />
+                        </StackPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Diag.Text.Body}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="Run any single test, stress test or benchmark on its own, in any order. Useful for re-checking one part." />
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Diag.Text.BodyStrong}" Text="Includes" Margin="0,16,0,6" />
+                        <TextBlock DockPanel.Dock="Top" x:Name="IncludedTests" Style="{StaticResource Diag.Text.Body}" />
+
+                        <ui:Button DockPanel.Dock="Bottom" Content="Open test dashboard" Margin="0,20,0,0"
+                                   Icon="{ui:SymbolIcon Toolbox24}" MinHeight="40" Padding="16,8" Click="OpenManual_Click" />
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <!-- ===== Windows 11 readiness ===== -->
+            <Border Style="{StaticResource Diag.Card}" Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <c:StatusIcon State="{Binding Win11.State}" Size="28" VerticalAlignment="Top" Margin="0,0,16,0" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" FontSize="16" Text="{Binding Win11.Headline}"
+                                   AutomationProperties.HeadingLevel="Level2" />
+                        <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding Win11.Detail}" Margin="0,2,0,0" />
+                        <TextBlock Style="{StaticResource Diag.Text.Caption}" Text="{Binding Win11.Note}" Margin="0,4,0,0"
+                                   x:Name="Win11Note" />
+                    </StackPanel>
+                    <ui:Button Grid.Column="2" Content="See requirements" Margin="16,0,0,0" VerticalAlignment="Center"
+                               Click="Win11Details_Click" />
+                </Grid>
+            </Border>
+
+            <!-- ===== Worth a look ===== -->
+            <Border x:Name="FindingsCard" Style="{StaticResource Diag.Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" FontSize="16" Text="Worth a look" Margin="0,0,0,8"
+                               AutomationProperties.HeadingLevel="Level2" />
+                    <ItemsControl x:Name="FindingsList" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="96" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <c:StatusIcon State="{Binding State}" Size="18" VerticalAlignment="Top" Margin="0,1,10,0" />
+                                    <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.Caption}" Text="{Binding Area}" Margin="0,2,8,0" />
+                                    <TextBlock Grid.Column="2" Style="{StaticResource Diag.Text.Body}" Text="{Binding Text}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== Specs ===== -->
+            <TextBlock Style="{StaticResource Diag.Text.Subtitle}" Text="This laptop" Margin="0,16,0,12"
+                       AutomationProperties.HeadingLevel="Level2" />
+            <ItemsControl x:Name="TileList" Focusable="False" Margin="0,0,-12,0">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <c:ColumnsPanel Columns="{Binding TileColumns, ElementName=Self}" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Diag.Card}" Padding="16" Margin="0,0,12,12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ui:SymbolIcon Symbol="{Binding Icon}" FontSize="20" VerticalAlignment="Top" Margin="0,2,12,0"
+                                               Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Style="{StaticResource Diag.Text.Caption}" Text="{Binding Label}" />
+                                    <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" Text="{Binding Value}" Margin="0,2,0,0" />
+                                    <TextBlock Style="{StaticResource Diag.Text.Caption}" Text="{Binding Detail}" Margin="0,2,0,0" />
+                                    <c:StatusPill Text="{Binding Pill}" State="{Binding PillState}" Margin="0,8,0,0" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
