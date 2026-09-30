@@ -12,7 +12,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel VerticalAlignment="Bottom">
-                    <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Stress test" AutomationProperties.HeadingLevel="Level1" />
+                    <TextBlock x:Name="Heading" Style="{StaticResource Diag.Text.Title}" Text="Stress test" AutomationProperties.HeadingLevel="Level1" />
                     <TextBlock x:Name="Intro" Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="0,6,24,0" MaxWidth="760" HorizontalAlignment="Left" />
                 </StackPanel>
@@ -32,7 +32,7 @@
             </c:ColumnsPanel>
 
             <c:ColumnsPanel Columns="2" Margin="0,0,-12,0">
-                <Border Style="{StaticResource Diag.Card}" Margin="0,0,12,12">
+                <Border x:Name="MemoryCard" Style="{StaticResource Diag.Card}" Margin="0,0,12,12">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -46,7 +46,7 @@
                         </StackPanel>
                     </Grid>
                 </Border>
-                <Border Style="{StaticResource Diag.Card}" Margin="0,0,12,12">
+                <Border x:Name="ScanCard" Style="{StaticResource Diag.Card}" Margin="0,0,12,12">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />

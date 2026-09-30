@@ -19,16 +19,20 @@ public partial class AutoRunWindow : Window
     private readonly AutoRunContext _ctx;
     private readonly List<StepView> _steps;
     private readonly List<Border> _segments = [];
+    private readonly bool _single;
     private readonly CancellationTokenSource _runCts = new();
     private CancellationTokenSource? _stepCts;
     private StepView? _current;
     private bool _finished, _closeAllowed;
 
-    public AutoRunWindow(AutoRunContext ctx, IEnumerable<StepView> steps)
+    /// <param name="single">Manual mode: one test, no summary; the window closes when it's done.</param>
+    public AutoRunWindow(AutoRunContext ctx, IEnumerable<StepView> steps, bool single = false)
     {
         InitializeComponent();
         _ctx = ctx;
         _ctx.Window = this;
+        _single = single;
+        Segments.Visibility = single ? Visibility.Collapsed : Visibility.Visible;
         _steps = steps.Where(s => s.IsApplicable(ctx)).ToList();
         foreach (var _ in _steps)
         {
@@ -77,13 +81,14 @@ public partial class AutoRunWindow : Window
             }
             PaintSegment(i, _ctx.Run[step.Id]?.Outcome);
         }
-        ShowSummary();
+        if (_single) { _finished = _closeAllowed = true; Close(); }
+        else ShowSummary();
     }
 
     private void Show(StepView step, int index)
     {
         _current = step;
-        StepCounter.Text = $"Step {index + 1} of {_steps.Count}";
+        StepCounter.Text = _single ? "Single test" : $"Step {index + 1} of {_steps.Count}";
         StepTitle.Text = step.Title;
         bool judged = step.Mode == StepMode.Judged;
         PassButton.Visibility = FailButton.Visibility = judged ? Visibility.Visible : Visibility.Collapsed;

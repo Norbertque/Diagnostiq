@@ -12,10 +12,12 @@ public partial class Win11View : UserControl
 {
     private readonly MainWindow _window;
 
-    public Win11View(MainWindow window, SystemSnapshot snapshot)
+    /// <param name="embedded">Shown inside Manual mode, which has its own navigation: no back button.</param>
+    public Win11View(MainWindow window, SystemSnapshot snapshot, bool embedded = false)
     {
         InitializeComponent();
         _window = window;
+        BackButton.Visibility = embedded ? Visibility.Collapsed : Visibility.Visible;
         var report = snapshot.Win11;
         var summary = HomeModel.Summarize(report, snapshot.Os.Value, snapshot.IsAdmin);
         DataContext = new { Summary = summary };

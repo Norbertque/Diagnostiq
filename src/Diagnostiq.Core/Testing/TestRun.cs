@@ -53,6 +53,16 @@ public sealed class TestRun
         get { lock (_lock) return _results.FirstOrDefault(r => r.Id == id); }
     }
 
+    /// <summary>Takes over another run's results and measurements (an Automatic run joining the session).</summary>
+    public void MergeFrom(TestRun other)
+    {
+        foreach (var r in other.Results) Record(r);
+        Stress = other.Stress ?? Stress;
+        Benchmark = other.Benchmark ?? Benchmark;
+        Ping = other.Ping ?? Ping;
+        WifiScan = other.WifiScan ?? WifiScan;
+    }
+
     public void Record(TestResult result)
     {
         lock (_lock)

@@ -39,7 +39,12 @@ public sealed record StressReport(
     string? MemorySkipped,
     SurfaceScanResult? Scan,
     string? ScanSkipped,
-    DrainResult? Drain);
+    DrainResult? Drain,
+    StressParts Parts = StressParts.All);
+
+/// <summary>Which parts of the burn-in run. Automatic mode runs all three together.</summary>
+[Flags]
+public enum StressParts { Cpu = 1, Memory = 2, DiskScan = 4, All = Cpu | Memory | DiskScan }
 
 /// <summary>
 /// The burn-in: CPU stress, memory pattern test and disk surface scan run at the same time
@@ -47,7 +52,7 @@ public sealed record StressReport(
 /// Telemetry is sampled every second for the live dashboard and throttling analysis. If
 /// the charger is pulled during the run, the unplugged stretch doubles as a battery drain test.
 /// </summary>
-public sealed class StressSession(SensorService? sensors, int? scanDisk, TimeSpan duration)
+public sealed class StressSession(SensorService? sensors, int? scanDisk, TimeSpan duration, StressParts parts = StressParts.All)
 {
     private static readonly TimeSpan SampleEvery = TimeSpan.FromSeconds(1);
 
@@ -64,15 +69,18 @@ public sealed class StressSession(SensorService? sensors, int? scanDisk, TimeSpa
         var sw = Stopwatch.StartNew();
         var samples = new List<StressSample>();
         using var cpu = new CpuStress();
-        cpu.Start();
+        if (parts.HasFlag(StressParts.Cpu)) cpu.Start();
 
-        var memoryTask = MemoryPatternTest.RunAsync(duration, progress: new Callback<MemoryTestProgress>(p => _memory = p), ct: ct);
+        var memoryTask = parts.HasFlag(StressParts.Memory)
+            ? MemoryPatternTest.RunAsync(duration, progress: new Callback<MemoryTestProgress>(p => _memory = p), ct: ct)
+            : null;
         Task<SurfaceScanResult>? scanTask = null;
         string? scanSkipped = null;
-        if (scanDisk is { } disk)
-            scanTask = SurfaceScan.RunAsync(disk, duration, new Callback<ScanProgress>(p => _scan = p), ct);
-        else
-            scanSkipped = "No internal system disk to scan.";
+        if (parts.HasFlag(StressParts.DiskScan))
+        {
+            if (scanDisk is { } disk) scanTask = SurfaceScan.RunAsync(disk, duration, new Callback<ScanProgress>(p => _scan = p), ct);
+            else scanSkipped = "No internal system disk to scan.";
+        }
 
         int tick = 0;
         BatteryLive? battery = BatteryLiveProbe.Read();
@@ -101,8 +109,11 @@ public sealed class StressSession(SensorService? sensors, int? scanDisk, TimeSpa
 
         MemoryTestResult? memory = null;
         string? memorySkipped = null;
-        try { memory = await memoryTask.ConfigureAwait(false); }
-        catch (Exception ex) when (ex is not OperationCanceledException) { memorySkipped = ex.Message; }
+        if (memoryTask is not null)
+        {
+            try { memory = await memoryTask.ConfigureAwait(false); }
+            catch (Exception ex) when (ex is not OperationCanceledException) { memorySkipped = ex.Message; }
+        }
 
         SurfaceScanResult? scan = null;
         if (scanTask is not null)
@@ -119,7 +130,7 @@ public sealed class StressSession(SensorService? sensors, int? scanDisk, TimeSpa
             samples.Any(s => s.TempLimited),
             AnalyzeThrottle(samples),
             memory, memorySkipped, scan, scanSkipped,
-            AnalyzeDrain(samples, battery));
+            AnalyzeDrain(samples, battery), parts);
     }
 
     private static BatteryLive? TryReadBattery()

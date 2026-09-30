@@ -126,3 +126,16 @@ public class StressEvaluationTests
         Assert.Equal(TestOutcome.Pass, run[TestIds.Keyboard]!.Outcome);
     }
 }
+
+public class StressPartsTests
+{
+    [Fact]
+    public void Only_selected_parts_produce_results()
+    {
+        var samples = Enumerable.Range(0, 60).Select(i => new StressSample(TimeSpan.FromSeconds(i), 100, 80, false, null, 120, null, true, 90, null)).ToList();
+        var report = new StressReport(TimeSpan.FromMinutes(1), false, samples, 80, 78, false, new(false, null, 120),
+            null, null, null, null, null, StressParts.Cpu);
+        var ids = Evaluate.Stress(report).Select(r => r.Id).ToList();
+        Assert.Equal([TestIds.Cpu], ids);
+    }
+}

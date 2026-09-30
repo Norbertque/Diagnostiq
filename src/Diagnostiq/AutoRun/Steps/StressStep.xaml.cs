@@ -8,21 +8,46 @@ namespace Diagnostiq.AutoRun.Steps;
 /// <summary>Live dashboard for the combined CPU + memory + disk burn-in.</summary>
 public partial class StressStep : StepView
 {
+    private readonly StressParts _parts;
+    private readonly TimeSpan? _duration;
     private double? _maxTemp;
     private bool _batteryPresent;
 
-    public StressStep() => InitializeComponent();
+    /// <param name="parts">Automatic mode runs everything together; Manual mode can pick.</param>
+    /// <param name="duration">Defaults to the run's preset.</param>
+    public StressStep(StressParts parts = StressParts.All, TimeSpan? duration = null)
+    {
+        InitializeComponent();
+        _parts = parts;
+        _duration = duration;
+    }
 
-    public override string Id => TestIds.Cpu;
-    public override string Title => "Stress test";
+    public override string Id => _parts.HasFlag(StressParts.Cpu) ? TestIds.Cpu : _parts.HasFlag(StressParts.Memory) ? TestIds.Memory : TestIds.SurfaceScan;
+
+    public override string Title => _parts switch
+    {
+        StressParts.Cpu => "Processor stress test",
+        StressParts.Memory => "Memory test",
+        StressParts.DiskScan => "Disk surface scan",
+        _ => "Stress test",
+    };
+
     public override StepMode Mode => StepMode.Automatic;
-    public override IReadOnlyList<string> ResultIds => [TestIds.Cpu, TestIds.Memory, TestIds.SurfaceScan];
+
+    public override IReadOnlyList<string> ResultIds =>
+        new[] { (StressParts.Cpu, TestIds.Cpu), (StressParts.Memory, TestIds.Memory), (StressParts.DiskScan, TestIds.SurfaceScan) }
+            .Where(p => _parts.HasFlag(p.Item1)).Select(p => p.Item2).ToList();
 
     protected override async Task OnRunAsync(CancellationToken ct)
     {
-        var duration = Ctx.Preset.Duration();
-        Intro.Text = $"The processor, memory and disk run flat out together for {Format.Minutes(duration)}, because faults tend to show " +
-                     "under heat and load. You don't need to do anything; the laptop may get warm and loud.";
+        var duration = _duration ?? Ctx.Preset.Duration();
+        Heading.Text = Title;
+        Intro.Text = _parts == StressParts.All
+            ? $"The processor, memory and disk run flat out together for {Format.Minutes(duration)}, because faults tend to show " +
+              "under heat and load. You don't need to do anything; the laptop may get warm and loud."
+            : $"Runs for {Format.Minutes(duration)}. You don't need to do anything.";
+        MemoryCard.Visibility = _parts.HasFlag(StressParts.Memory) ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        ScanCard.Visibility = _parts.HasFlag(StressParts.DiskScan) ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
         Remaining.Text = Clock(duration);
         foreach (var card in new[] { TempCard, ClockCard, LoadCard, FanCard })
         {
@@ -44,10 +69,10 @@ public partial class StressStep : StepView
             ScanText.Text = Ctx.Snapshot.IsAdmin ? "Skipped: no internal system disk." : "Skipped: needs administrator rights.";
         }
 
-        var session = new StressSession(Ctx.Sensors, disk, duration);
+        var session = new StressSession(Ctx.Sensors, disk, duration, _parts);
         session.Progress += p => Dispatcher.InvokeAsync(() => Update(p));
         var report = await session.RunAsync(ct);
-        if (disk is null && !Ctx.Snapshot.IsAdmin) report = report with { ScanSkipped = "Needs administrator rights." };
+        if (disk is null && !Ctx.Snapshot.IsAdmin && _parts.HasFlag(StressParts.DiskScan)) report = report with { ScanSkipped = "Needs administrator rights." };
 
         Ctx.Run.Stress = report;
         foreach (var result in Evaluate.Stress(report)) Ctx.Run.Record(result);

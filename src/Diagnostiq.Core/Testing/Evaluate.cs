@@ -10,31 +10,34 @@ public static class Evaluate
     /// <summary>Sequential reads below this are slow even for a hard drive in good shape.</summary>
     public const double SlowReadMBps = 100;
 
+    /// <summary>Results only for the parts that were selected, so a CPU-only run doesn't overwrite an earlier memory result.</summary>
     public static IEnumerable<TestResult> Stress(StressReport r)
     {
-        bool ran = r.Samples.Count >= 10;
-        yield return Cpu(r, ran);
-
-        if (r.Memory is { } m && m.TestedBytes > 0)
-        {
-            string gb = $"{m.TestedBytes / (double)(1L << 30):0.#} GB";
-            yield return m.Errors > 0
-                ? new(TestIds.Memory, "Memory", TestOutcome.Fail, $"{m.Errors:N0} errors found in {gb} tested. A memory module is faulty.")
-                : new(TestIds.Memory, "Memory", TestOutcome.Pass, $"{gb} tested over {m.Passes} {(m.Passes == 1 ? "pass" : "passes")}, no errors.");
-        }
-        else
-            yield return new(TestIds.Memory, "Memory", TestOutcome.Skipped, r.MemorySkipped ?? "Didn't run.");
-
-        if (r.Scan is { } s && s.ChunksRead > 0)
-            yield return s.Errors > 0
-                ? new(TestIds.SurfaceScan, "Disk surface scan", TestOutcome.Fail, $"{s.Errors} unreadable areas out of {s.ChunksRead:N0} read. The drive has bad sectors.")
-                : new(TestIds.SurfaceScan, "Disk surface scan", TestOutcome.Pass, $"{s.ChunksRead:N0} areas read across the whole disk, no errors ({s.AvgMBps:0} MB/s average).");
-        else
-            yield return new(TestIds.SurfaceScan, "Disk surface scan", TestOutcome.Skipped, r.ScanSkipped ?? "Didn't run.");
-
+        if (r.Parts.HasFlag(StressParts.Cpu)) yield return Cpu(r, ran: r.Samples.Count >= 10);
+        if (r.Parts.HasFlag(StressParts.Memory)) yield return Memory(r);
+        if (r.Parts.HasFlag(StressParts.DiskScan)) yield return Scan(r);
         if (r.Drain is { } d)
             yield return new(TestIds.BatteryDrain, "Battery under load", TestOutcome.Pass,
                 $"{d.AverageWatts:0.0} W under full load" + (d.EstimatedRuntime is { } t ? $", about {Hours(t)} on a full charge." : "."));
+    }
+
+    private static TestResult Memory(StressReport r)
+    {
+        if (r.Memory is not { TestedBytes: > 0 } m)
+            return new(TestIds.Memory, "Memory", TestOutcome.Skipped, r.MemorySkipped ?? "Didn't run.");
+        string gb = $"{m.TestedBytes / (double)(1L << 30):0.#} GB";
+        return m.Errors > 0
+            ? new(TestIds.Memory, "Memory", TestOutcome.Fail, $"{m.Errors:N0} errors found in {gb} tested. A memory module is faulty.")
+            : new(TestIds.Memory, "Memory", TestOutcome.Pass, $"{gb} tested over {m.Passes} {(m.Passes == 1 ? "pass" : "passes")}, no errors.");
+    }
+
+    private static TestResult Scan(StressReport r)
+    {
+        if (r.Scan is not { ChunksRead: > 0 } s)
+            return new(TestIds.SurfaceScan, "Disk surface scan", TestOutcome.Skipped, r.ScanSkipped ?? "Didn't run.");
+        return s.Errors > 0
+            ? new(TestIds.SurfaceScan, "Disk surface scan", TestOutcome.Fail, $"{s.Errors} unreadable areas out of {s.ChunksRead:N0} read. The drive has bad sectors.")
+            : new(TestIds.SurfaceScan, "Disk surface scan", TestOutcome.Pass, $"{s.ChunksRead:N0} areas read across the whole disk, no errors ({s.AvgMBps:0} MB/s average).");
     }
 
     private static TestResult Cpu(StressReport r, bool ran)

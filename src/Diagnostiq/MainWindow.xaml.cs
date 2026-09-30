@@ -18,6 +18,7 @@ public partial class MainWindow : FluentWindow
 {
     private readonly SnackbarService _snackbar = new();
     private HomeView? _home;
+    private ManualView? _manual;
     private bool _closeConfirmed;
 
     public MainWindow()
@@ -51,8 +52,41 @@ public partial class MainWindow : FluentWindow
 
     public void ShowHome() => Navigate(_home ??= new HomeView(this, Snapshot!));
 
-    /// <summary>The last Automatic run, kept for Home and the report.</summary>
+    public void ShowManual(string? page = null)
+    {
+        _manual ??= new ManualView(this, Snapshot!);
+        if (page is not null) _manual.Select(page);
+        Navigate(_manual);
+    }
+
+    /// <summary>Every result from this session (Automatic runs and single tests), for the report.</summary>
+    public TestRun Session { get; } = new();
+
+    /// <summary>Raised on the UI thread after a test window closes and the session changed.</summary>
+    public event Action? SessionChanged;
+
+    /// <summary>The last Automatic run, kept for its summary.</summary>
     public TestRun? LastRun { get; private set; }
+
+    /// <summary>Manual mode: one step in the same fullscreen shell, recording straight into the session.</summary>
+    public void RunSingle(StepView step, StressPreset preset = StressPreset.Standard)
+    {
+        var context = new AutoRunContext(Snapshot!, Sensors, preset, Session);
+        if (!step.IsApplicable(context))
+        {
+            Notify("Not available", $"{step.Title} doesn't apply to this laptop.");
+            return;
+        }
+        var window = new AutoRunWindow(context, [step], single: true) { Owner = this };
+        IsEnabled = false;
+        window.Closed += (_, _) =>
+        {
+            IsEnabled = true;
+            Activate();
+            SessionChanged?.Invoke();
+        };
+        window.Show();
+    }
 
     /// <summary>The Automatic run's steps, in order.</summary>
     public static List<StepView> AutomaticSteps() =>
@@ -84,7 +118,9 @@ public partial class MainWindow : FluentWindow
         {
             IsEnabled = true;
             LastRun = run.Run;
+            Session.MergeFrom(run.Run);
             Activate();
+            SessionChanged?.Invoke();
         };
         run.Show();
         return run;

@@ -80,6 +80,12 @@ internal static class Snapshot
                 case ("win11", "HomeView"):
                     window.ShowWin11();
                     break;
+                case (_, "HomeView") when view.StartsWith("manual-"):
+                    window.ShowManual(view["manual-".Length..]);
+                    break;
+                case (_, "ManualView") when view.StartsWith("manual-"):
+                    Save(window, window.Host, path);
+                    break;
                 case ("win11", "Win11View"):
                     Save(window, window.Host, path);
                     break;
@@ -107,6 +113,18 @@ internal static class Snapshot
                     break;
             }
         };
+    }
+
+    /// <summary>The page's main scroll area: the first ScrollViewer in the visual tree.</summary>
+    private static System.Windows.Controls.ScrollViewer? FindScroller(DependencyObject root)
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is System.Windows.Controls.ScrollViewer sv && sv.TemplatedParent is not System.Windows.Controls.ItemsControl) return sv;
+            if (FindScroller(child) is { } found) return found;
+        }
+        return null;
     }
 
     /// <summary>Records a typical mix of outcomes so the summary layout can be checked without a 15-minute run.</summary>
@@ -141,7 +159,7 @@ internal static class Snapshot
             var dpi = VisualTreeHelper.GetDpi(window);
             RenderTargetBitmap bmp;
 
-            var page = _fullPage && host.Content is System.Windows.Controls.UserControl { Content: System.Windows.Controls.ScrollViewer { Content: FrameworkElement c } } ? c : null;
+            var page = _fullPage && FindScroller(host) is { Content: FrameworkElement c } ? c : null;
             if (page is not null)
             {
                 // Render the page content at its full height. RenderTargetBitmap draws a visual at its

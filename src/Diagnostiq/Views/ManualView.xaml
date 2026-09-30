@@ -1,0 +1,35 @@
+<UserControl x:Class="Diagnostiq.Views.ManualView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="248" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Navigation rail -->
+        <DockPanel Margin="12,8,12,16">
+            <ui:Button DockPanel.Dock="Top" Appearance="Transparent" Icon="{ui:SymbolIcon ArrowLeft24}" Content="Home"
+                       HorizontalAlignment="Left" Margin="0,0,0,12" Click="Home_Click" AutomationProperties.Name="Back to Home" />
+            <TextBlock DockPanel.Dock="Top" Style="{StaticResource Diag.Text.Caption}" Text="Manual tests" Margin="12,0,0,8" />
+            <ListBox x:Name="Nav" SelectionChanged="Nav_SelectionChanged" BorderThickness="0" Background="Transparent"
+                     ItemContainerStyle="{StaticResource Diag.NavItem}"
+                     AutomationProperties.Name="Sections">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Margin="4,6">
+                            <ui:SymbolIcon Symbol="{Binding Icon}" FontSize="18" Margin="0,0,12,0" />
+                            <TextBlock Text="{Binding Title}" Style="{StaticResource Diag.Text.Body}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+
+        <Border Grid.Column="1" Background="{DynamicResource LayerFillColorDefaultBrush}" CornerRadius="8,0,0,0"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1,1,0,0">
+            <ContentControl x:Name="Page" Focusable="False" IsTabStop="False" />
+        </Border>
+    </Grid>
+</UserControl>
