@@ -25,6 +25,8 @@
   <ItemGroup>
     <!-- Signed PawnIO driver setup 2.2.0 (GPL-2.0, github.com/namazso/PawnIO.Setup), shipped unmodified. -->
     <EmbeddedResource Include="Resources\PawnIO_setup.exe" LogicalName="PawnIO_setup.exe" />
+    <!-- AMD models from Microsoft's Windows 11 supported-processor lists (see the file header). -->
+    <EmbeddedResource Include="Resources\win11-amd-models.txt" LogicalName="win11-amd-models.txt" />
   </ItemGroup>
 
 </Project>

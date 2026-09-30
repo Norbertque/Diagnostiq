@@ -34,6 +34,43 @@ public class IntegrationTests
         Assert.NotNull(reading.CpuClockMHz);
     }
 
+    [Fact]
+    public async Task Phase3_probes_run_and_never_error()
+    {
+        var snap = await SnapshotBuilder.BuildAsync().WaitAsync(TimeSpan.FromSeconds(45));
+        snap.Sensors.Value?.Dispose();
+
+        var log = new System.Text.StringBuilder();
+        void Show<T>(string name, ProbeResult<T> r) =>
+            log.AppendLine($"{name}: {r.Status} {(r.Value is System.Collections.IEnumerable e and not string ? string.Join(" | ", e.Cast<object>()) : r.Value)} {r.Message}");
+        Show("Firmware", snap.Firmware);
+        Show("Tpm", snap.Tpm);
+        Show("Gpus", snap.Gpus);
+        Show("DirectX12", snap.DirectX12);
+        Show("Displays", snap.Displays);
+        Show("DriveHealth", snap.DriveHealth);
+        Show("BatteryLive", snap.BatteryLive);
+        Show("Wifi", snap.Wifi);
+        Show("Os", snap.Os);
+        Show("Activation", snap.Activation);
+        Show("BitLocker", snap.BitLocker);
+        Show("DeviceProblems", snap.DeviceProblems);
+        Show("Antivirus", snap.Antivirus);
+        log.AppendLine($"Device: {snap.Device}");
+        log.AppendLine($"Win11: {snap.Win11.Verdict}, running 11: {snap.Win11.RunningWindows11}");
+        foreach (var c in snap.Win11.Checks) log.AppendLine($"  {c.State,-7} {c.Title}: {c.Detail} {c.Hint}");
+        log.AppendLine($"Elapsed: {snap.Elapsed.TotalSeconds:0.0} s");
+        File.WriteAllText(Path.Combine(Path.GetTempPath(), "diagnostiq-phase3-probes.txt"), log.ToString());
+
+        Assert.DoesNotContain(ProbeStatus.Error, new[]
+        {
+            snap.Firmware.Status, snap.Tpm.Status, snap.Gpus.Status, snap.DirectX12.Status, snap.Displays.Status,
+            snap.DriveHealth.Status, snap.Wifi.Status, snap.Os.Status, snap.Activation.Status, snap.DeviceProblems.Status,
+            snap.Antivirus.Status, snap.BatteryLive.Status,
+        });
+        Assert.NotEqual(Win11.Win11Verdict.NotSupported, snap.Win11.Verdict);   // the dev laptop is a supported Latitude 7430
+    }
+
     // Progress<T> posts to the thread pool asynchronously; this reports inline.
     private sealed class SyncProgress<T>(Action<T> handler) : IProgress<T>
     {

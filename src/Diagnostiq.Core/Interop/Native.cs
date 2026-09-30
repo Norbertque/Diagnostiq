@@ -92,4 +92,37 @@ internal static partial class Native
 
     [LibraryImport("pdh.dll")]
     public static partial uint PdhCloseQuery(IntPtr query);
+
+    // ----- Firmware -----
+    public const int FirmwareTypeBios = 1, FirmwareTypeUefi = 2;
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetFirmwareType(out int firmwareType);
+
+    // ----- TPM Base Services (no admin needed, unlike Win32_Tpm) -----
+    [StructLayout(LayoutKind.Sequential)]
+    public struct TpmDeviceInfo
+    {
+        public uint StructVersion;
+        public uint TpmVersion;        // 1 = TPM 1.2, 2 = TPM 2.0
+        public uint TpmInterfaceType;
+        public uint TpmImpRevision;
+    }
+
+    public const uint TbsSuccess = 0;
+    public const uint TbsTpmNotFound = 0x8028400F;
+    public const uint TbsServiceNotRunning = 0x80284008;
+    public const uint TbsServiceDisabled = 0x80284010;
+
+    [LibraryImport("tbs.dll")]
+    public static partial uint Tbsi_GetDeviceInfo(uint size, out TpmDeviceInfo info);
+
+    // ----- Direct3D 12 (Windows 11 needs DirectX 12 with a WDDM 2.x driver) -----
+    public const int D3DFeatureLevel11_0 = 0xB000;
+    public static readonly Guid IidID3D12Device = new("189819f1-1db6-4b57-be54-1821339b85f7");
+
+    /// <summary>With <paramref name="device"/> = null it only tests support: S_FALSE (1) means a device could be created.</summary>
+    [LibraryImport("d3d12.dll")]
+    public static partial int D3D12CreateDevice(IntPtr adapter, int minimumFeatureLevel, in Guid riid, IntPtr device);
 }

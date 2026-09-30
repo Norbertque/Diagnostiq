@@ -27,7 +27,7 @@ public class ModelTests
     [InlineData("1.2, 2, 3", 1.2)]
     public void Tpm_major_version_parsed(string spec, double expected)
     {
-        Assert.Equal(expected, new TpmInfo(true, spec, true, true, null).MajorVersion);
+        Assert.Equal(expected, new TpmInfo(true, null, spec, true, true, null).MajorVersion);
     }
 
     [Theory]
