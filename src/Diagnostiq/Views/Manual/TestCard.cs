@@ -14,22 +14,25 @@ namespace Diagnostiq.Views.Manual;
 public sealed class TestCard : Border
 {
     private readonly string _id;
+    private readonly string _title;
     private readonly StatusPill _pill = new();
     private readonly TextBlock _detail = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
-    private readonly Wpf.Ui.Controls.Button _run = new() { Content = "Run", Icon = new SymbolIcon(SymbolRegular.Play24), MinHeight = 36 };
+    private readonly Wpf.Ui.Controls.Button _run = new() { Icon = new SymbolIcon(SymbolRegular.Play24), MinHeight = 36 };
 
     public TestCard(string id, string title, string description, SymbolRegular icon, Action run)
     {
         _id = id;
+        _title = title;
         SetResourceReference(StyleProperty, "Diag.Card");
         Margin = new Thickness(0, 0, 12, 12);
-        AutomationProperties.SetName(this, title);
+        SetRunLabel("Run");
 
         var symbol = new SymbolIcon(icon) { FontSize = 20, Margin = new Thickness(0, 2, 12, 0), VerticalAlignment = VerticalAlignment.Top };
         symbol.SetResourceReference(SymbolIcon.ForegroundProperty, "AccentTextFillColorPrimaryBrush");
         var heading = new TextBlock { Text = title };
         heading.SetResourceReference(StyleProperty, "Diag.Text.BodyStrong");
-        var desc = new TextBlock { Text = description };
+        // Two caption lines, so the status rows line up across a row of cards.
+        var desc = new TextBlock { Text = description, MinHeight = 32 };
         desc.SetResourceReference(StyleProperty, "Diag.Text.Caption");
         _detail.SetResourceReference(StyleProperty, "Diag.Text.Caption");
         _run.Click += (_, _) => run();
@@ -63,6 +66,13 @@ public sealed class TestCard : Border
         _pill.State = Outcomes.State(r?.Outcome);
         _detail.Text = r?.Detail ?? "";
         _detail.Visibility = string.IsNullOrEmpty(r?.Detail) ? Visibility.Collapsed : Visibility.Visible;
-        _run.Content = r is null ? "Run" : "Run again";
+        SetRunLabel(r is null ? "Run" : "Run again");
+    }
+
+    /// <summary>Twelve identical "Run" buttons mean nothing to a screen reader; the name adds the test, after the visible label.</summary>
+    private void SetRunLabel(string label)
+    {
+        _run.Content = label;
+        AutomationProperties.SetName(_run, $"{label}: {_title}");
     }
 }

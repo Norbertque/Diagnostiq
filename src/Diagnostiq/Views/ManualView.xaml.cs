@@ -55,5 +55,9 @@ public partial class ManualView : UserControl
 
     private void Home_Click(object sender, RoutedEventArgs e) => _window.ShowHome();
 
-    private sealed record NavItem(string Key, string Title, SymbolRegular Icon);
+    // ListBoxItem's accessible name falls back to the item's ToString; a record would read out all its fields.
+    private sealed record NavItem(string Key, string Title, SymbolRegular Icon)
+    {
+        public override string ToString() => Title;
+    }
 }

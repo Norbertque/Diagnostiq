@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using Diagnostiq.Controls;
@@ -23,9 +24,11 @@ public sealed class HardwarePage : UserControl
     public HardwarePage(SystemSnapshot s, MainWindow window)
     {
         _window = window;
-        var page = new StackPanel { Margin = new Thickness(32, 24, 32, 32), MaxWidth = 1000 };
+        var page = new StackPanel { Margin = new Thickness(32, 24, 32, 32) };
+        page.SetResourceReference(MaxWidthProperty, "Diag.Page.MaxWidth");
         var title = new TextBlock { Text = "Hardware", Margin = new Thickness(0, 0, 0, 20) };
         title.SetResourceReference(StyleProperty, "Diag.Text.Title");
+        AutomationProperties.SetHeadingLevel(title, AutomationHeadingLevel.Level1);
         page.Children.Add(title);
 
         page.Children.Add(Device(s));
@@ -50,7 +53,15 @@ public sealed class HardwarePage : UserControl
     private async Task RefreshLiveAsync()
     {
         var sensors = _window.Sensors;
-        if (sensors is null || !_window.IsEnabled) return;   // a test window is using the sensors
+        if (sensors is null)
+        {
+            // The sensor service didn't start (timed out or failed at startup); don't leave "Reading…" up forever.
+            // Loaded restarts the timer, so readings appear if the driver install on Home opens the sensors later.
+            _liveText.Text = "The temperature sensors didn't start, so live readings aren't available.";
+            _timer.Stop();
+            return;
+        }
+        if (!_window.IsEnabled) return;   // a test window is using the sensors
         var r = await Task.Run(sensors.Read);
         string temp = r.CpuTempC is { } t ? $"{t:0} °C{(r.CpuTempLimited ? " (approximate)" : "")}" : "not available";
         string fans = r.Fans.Count > 0 ? string.Join(", ", r.Fans.Select(f => $"{f.Rpm:N0} rpm")) : "not reported";
@@ -78,7 +89,7 @@ public sealed class HardwarePage : UserControl
         var c = s.Cpu.Value;
         var support = c is null ? null : SupportedCpus.Check(c.Name);
         return new DetailSection("Processor")
-            .Row("Name", c is null ? s.Cpu.Message : Names.Clean(c.Name))
+            .Row("Name", c is null ? Outcomes.Unavailable(s.Cpu) : Names.Clean(c.Name))
             .Row("Cores / threads", c is null ? null : $"{c.Cores} / {c.Threads}")
             .Row("Base clock", c is { MaxClockMHz: > 0 } ? $"{c.MaxClockMHz / 1000.0:0.0#} GHz" : null)
             .Row("Windows 11 list", support?.Family, support?.Support switch
@@ -94,7 +105,7 @@ public sealed class HardwarePage : UserControl
     {
         var m = s.Memory.Value;
         var section = new DetailSection("Memory")
-            .Row("Installed", m is null ? s.Memory.Message : Format.Memory(m.InstalledBytes))
+            .Row("Installed", m is null ? Outcomes.Unavailable(s.Memory) : Format.Memory(m.InstalledBytes))
             .Row("Usable by Windows", m is null ? null : Format.Memory(m.VisibleBytes));
         if (m is { Modules.Count: 0 }) section.Note("Individual modules aren't reported (usually soldered memory).");
         foreach (var (mod, i) in (m?.Modules ?? []).Select((x, i) => (x, i)))
@@ -170,13 +181,13 @@ public sealed class HardwarePage : UserControl
         return section
             .Row("Charge", b.ChargePercent is { } c ? $"{c}%" : null)
             .Row("Health", b.HealthPercent is { } h ? $"{h:0}% of original capacity" : null,
-                b.HealthPercent switch { < 40 => "Replace", < 60 => "Worn", not null => "Good", _ => null },
+                b.HealthPercent switch { < 40 => "Replace", < 60 => "Worn", < 80 => "Fair", not null => "Good", _ => null },
                 b.HealthPercent switch { < 40 => CheckState.Fail, < 60 => CheckState.Warn, not null => CheckState.Pass, _ => null })
             .Row("Design capacity", b.DesignCapacityMWh is { } dc ? $"{dc / 1000.0:0.#} Wh" : null)
             .Row("Full charge capacity", b.FullChargeCapacityMWh is { } fc ? $"{fc / 1000.0:0.#} Wh" : null)
             .Row("Charge cycles", b.CycleCount?.ToString())
             .Row("Power", live?.Charging == true ? $"Charging{(live.ChargeRateMw is > 0 and var r ? $" at {r / 1000.0:0.#} W" : "")}"
-                        : b.OnAcPower == true ? "On AC" : live?.DischargeWatts is { } w ? $"On battery, drawing {w:0.0} W" : "On battery")
+                        : b.OnAcPower == true ? "Plugged in" : live?.DischargeWatts is { } w ? $"On battery, drawing {w:0.0} W" : "On battery")
             .Row("Batteries", b.BatteryCount > 1 ? b.BatteryCount.ToString() : null);
     }
 

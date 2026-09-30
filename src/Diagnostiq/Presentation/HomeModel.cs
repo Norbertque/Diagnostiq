@@ -8,7 +8,12 @@ using Wpf.Ui.Controls;
 
 namespace Diagnostiq.Presentation;
 
-public sealed record SpecTile(string Label, SymbolRegular Icon, string Value, string? Detail, string? Pill = null, CheckState? PillState = null);
+public sealed record SpecTile(string Label, SymbolRegular Icon, string Value, string? Detail, string? Pill = null, CheckState? PillState = null)
+{
+    /// <summary>What a screen reader says for the tile (the list reads items by their ToString).</summary>
+    public override string ToString() =>
+        string.Join(". ", new[] { $"{Label}: {Value}", Detail, Pill }.Where(s => !string.IsNullOrEmpty(s))) + ".";
+}
 
 public sealed record Win11Summary(CheckState State, string Headline, string Detail, string? Note);
 
@@ -48,33 +53,36 @@ public sealed class HomeModel
         switch (r.Verdict)
         {
             case Win11Verdict.Ready:
-                var warns = r.Checks.Where(c => c.State == CheckState.Warn).Select(c => $"{c.Title}: {Lower(c.Detail)}").ToList();
-                return new(CheckState.Pass, "Ready for Windows 11",
-                    warns.Count > 0 ? string.Join(" ", warns) : $"Meets all {r.Checks.Count} requirements.", note);
+                // Informative checks (display, memory, …) may be unreadable without changing the verdict; say so.
+                var warns = r.Checks.Where(c => c.State == CheckState.Warn).Select(c => $"{c.Title}: {c.Detail}").ToList();
+                int unread = r.Checks.Count(c => c.State == CheckState.Unknown);
+                string unreadNote = $"{unread} requirement{(unread == 1 ? "" : "s")} couldn't be checked.";
+                string detail = warns.Count > 0 ? string.Join(" ", warns) + (unread > 0 ? " " + unreadNote : "")
+                              : unread == 0 ? $"Meets all {r.Checks.Count} requirements."
+                              : $"Meets {r.Checks.Count - unread} of {r.Checks.Count} requirements; {unread} couldn't be checked.";
+                return new(CheckState.Pass, "Ready for Windows 11", detail, note);
 
             case Win11Verdict.ReadyAfterChanges:
                 string after = failed.All(c => c.Fix == FixKind.BiosSetting) ? "after BIOS changes"
                              : failed.All(c => c.Fix == FixKind.Driver) ? "after a driver install"
                              : "after a few changes";
                 return new(CheckState.Warn, $"Ready for Windows 11 {after}",
-                    "To change: " + string.Join(", ", failed.Select(c => c.Title)) + ". See details for how.", note);
+                    "To change: " + string.Join(", ", failed.Select(c => c.Title)) + ".", note);
 
             case Win11Verdict.NotSupported:
-                var blockers = failed.Where(c => c.Fix == FixKind.Hardware).Select(c => c.Id == "cpu" ? $"{c.Title} ({c.Detail.TrimEnd('.')})" : c.Title);
-                return new(CheckState.Fail, "Doesn't meet Windows 11 requirements", "Not supported: " + string.Join(", ", blockers) + ".", note);
+                var blockers = failed.Where(c => c.Fix == FixKind.Hardware).Select(c => $"{c.Title}: {c.Detail}");
+                return new(CheckState.Fail, "Doesn't meet Windows 11 requirements", string.Join(" ", blockers), note);
 
             default:
                 var unknown = r.Checks.Where(c => c.State == CheckState.Unknown).Select(c => c.Title);
                 return new(CheckState.Unknown, "Couldn't check every Windows 11 requirement",
-                    "Unknown: " + string.Join(", ", unknown) + "." + (isAdmin ? "" : " Run as administrator for full results."), note);
+                    "Couldn't read: " + string.Join(", ", unknown) + "." + (isAdmin ? "" : " Restart as administrator for full results."), note);
         }
     }
 
-    private static string Lower(string s) => s.Length > 1 && char.IsUpper(s[0]) && !char.IsUpper(s[1]) ? char.ToLowerInvariant(s[0]) + s[1..] : s;
-
     private static SpecTile Cpu(SystemSnapshot s)
     {
-        if (s.Cpu.Value is not { } c) return new("Processor", SymbolRegular.DeveloperBoard24, "Not detected", s.Cpu.Message);
+        if (s.Cpu.Value is not { } c) return new("Processor", SymbolRegular.DeveloperBoard24, "Not detected", Outcomes.Unavailable(s.Cpu));
         return new("Processor", SymbolRegular.DeveloperBoard24, Names.Clean(c.Name),
             Format.Join($"{c.Cores} cores", c.Threads != c.Cores ? $"{c.Threads} threads" : null,
                 c.MaxClockMHz > 0 ? $"base {c.MaxClockMHz / 1000.0:0.0#} GHz" : null));
@@ -82,7 +90,7 @@ public sealed class HomeModel
 
     private static SpecTile Memory(SystemSnapshot s)
     {
-        if (s.Memory.Value is not { } m) return new("Memory", SymbolRegular.Memory16, "Not detected", s.Memory.Message);
+        if (s.Memory.Value is not { } m) return new("Memory", SymbolRegular.Memory16, "Not detected", Outcomes.Unavailable(s.Memory));
         var modules = m.Modules.GroupBy(x => x.CapacityBytes).Select(g => $"{g.Count()} × {Format.Memory(g.Key)}");
         int? speed = m.Modules.Max(x => x.SpeedMHz);
         return new("Memory", SymbolRegular.Memory16, Format.Memory(m.InstalledBytes > 0 ? m.InstalledBytes : m.VisibleBytes),
@@ -92,7 +100,7 @@ public sealed class HomeModel
     private static SpecTile Storage(SystemSnapshot s)
     {
         var disk = s.SystemDisk;
-        if (disk is null) return new("Storage", SymbolRegular.Storage24, "Not detected", s.Disks.Message);
+        if (disk is null) return new("Storage", SymbolRegular.Storage24, "Not detected", s.Disks.IsOk ? null : Outcomes.Unavailable(s.Disks));
         var health = s.DriveHealth.Value?.FirstOrDefault(d => d.DiskNumber == disk.Number);
         var verdict = health is null ? null : StorageHealth.Evaluate(health);
         string kind = Format.Join(health?.BusType is { } b && b != "Other" ? b : disk.InterfaceType, health?.MediaType is "SSD" or "HDD" ? health.MediaType : null).Replace(" · ", " ");
@@ -116,7 +124,7 @@ public sealed class HomeModel
     private static SpecTile Graphics(SystemSnapshot s)
     {
         var gpus = s.Gpus.Value ?? [];
-        if (gpus.Count == 0) return new("Graphics", SymbolRegular.Games24, "Not detected", s.Gpus.Message);
+        if (gpus.Count == 0) return new("Graphics", SymbolRegular.Games24, "Not detected", s.Gpus.IsOk ? null : Outcomes.Unavailable(s.Gpus));
         var main = gpus[0];
         return new("Graphics", SymbolRegular.Games24, Names.Clean(main.Name),
             Format.Join(main.DedicatedMemoryBytes is > 0 and var v ? $"{Format.Memory(v)} video memory" : null,
@@ -128,7 +136,7 @@ public sealed class HomeModel
 
     private static SpecTile Display(SystemSnapshot s)
     {
-        if (s.MainDisplay is not { } p) return new("Display", SymbolRegular.Desktop24, "Not detected", s.Displays.Message);
+        if (s.MainDisplay is not { } p) return new("Display", SymbolRegular.Desktop24, "Not detected", s.Displays.IsOk ? null : Outcomes.Unavailable(s.Displays));
         var value = Format.Join(p.DiagonalInches is { } d ? $"{d:0.0}\"" : null, p.WidthPx is { } w && p.HeightPx is { } h ? $"{w} × {h}" : null);
         return new("Display", SymbolRegular.Desktop24, value.Length > 0 ? value.Replace(" · ", " ") : "Size not reported",
             Format.Join(p.IsInternal ? "Built-in" : "External", p.Name ?? (p.ManufacturerCode is { } m ? $"{m} panel" : null)));
@@ -139,7 +147,7 @@ public sealed class HomeModel
         if (s.Battery.Value is not { Present: true } b)
             return new("Battery", SymbolRegular.Battery524, s.Battery.IsOk || s.Battery.Status == Core.Probing.ProbeStatus.NotAvailable ? "No battery" : "Not detected", null);
         var live = s.BatteryLive.Value;
-        string power = live?.Charging == true ? "charging" : b.OnAcPower == true ? "on AC" : live?.DischargeWatts is { } wt ? $"drawing {wt:0.0} W" : "on battery";
+        string power = live?.Charging == true ? "charging" : b.OnAcPower == true ? "plugged in" : live?.DischargeWatts is { } wt ? $"drawing {wt:0.0} W" : "on battery";
         string? capacity = b.FullChargeCapacityMWh is { } full && b.DesignCapacityMWh is { } design ? $"{full / 1000.0:0} of {design / 1000.0:0} Wh" : null;
         var detail = Format.Join(b.ChargePercent is { } c ? $"{c}% charged, {power}" : power, b.CycleCount is { } cyc ? $"{cyc} cycles" : null, capacity);
 
@@ -174,13 +182,19 @@ public sealed class HomeModel
 
     private static SpecTile Windows(SystemSnapshot s)
     {
-        if (s.Os.Value is not { } os) return new("Windows", SymbolRegular.Window24, "Not detected", s.Os.Message);
+        if (s.Os.Value is not { } os) return new("Windows", SymbolRegular.Window24, "Not detected", Outcomes.Unavailable(s.Os));
         var act = s.Activation.Value;
-        string? pill = act is null ? null : act.IsActivated ? "Activated" : "Not activated";
+        var (pill, state) = act switch
+        {
+            // An unknown licence state means the licensing service didn't answer, not that Windows isn't activated.
+            null or { State: LicenseState.Unknown } => ((string?)null, (CheckState?)null),
+            { IsActivated: true } => ("Activated", CheckState.Pass),
+            _ => ("Not activated", CheckState.Warn),
+        };
         return new("Windows", SymbolRegular.Window24, Format.Join(os.Name, os.DisplayVersion).Replace(" · ", " "),
             Format.Join($"Build {os.BuildString}", os.InstallDate is { } d ? $"installed {Format.Date(d)}" : null,
                 act?.HasFirmwareKey == true ? $"Windows {act.FirmwareKeyEdition} key in BIOS" : null),
-            pill, act is null ? null : act.IsActivated ? CheckState.Pass : CheckState.Warn);
+            pill, state);
     }
 
     private static SpecTile Security(SystemSnapshot s)
@@ -202,7 +216,14 @@ public sealed class HomeModel
         string? antivirus = av is null ? null
             : av.FirstOrDefault(a => a.Enabled) is { } on ? $"{on.Name} on"
             : av.Count > 0 ? "Antivirus off" : null;
-        string? bitlocker = s.BitLocker.Value is { } bl ? $"BitLocker {(bl.IsProtected ? "on" : bl.Conversion.ToLowerInvariant())}" : null;
+        string? bitlocker = s.BitLocker.Value is not { } bl ? null
+            : bl.IsProtected ? "BitLocker on"
+            : bl.Conversion switch
+            {
+                "Not encrypted" => "BitLocker off",
+                "Encrypted" => "BitLocker suspended",   // encrypted, but protection is paused
+                var c => $"BitLocker {c.ToLowerInvariant()}",
+            };
         return new("Security", SymbolRegular.ShieldKeyhole24, $"{tpm}, {boot}", Format.Join(antivirus, bitlocker));
     }
 }

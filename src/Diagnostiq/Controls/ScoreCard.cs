@@ -14,12 +14,13 @@ public sealed class ScoreCard : Border
     {
         SetResourceReference(StyleProperty, "Diag.Surface");
         Margin = new Thickness(0, 0, 0, 16);
-        AutomationProperties.SetName(this, $"Health score {h.Score} of 100, {HealthScore.Label(h.Verdict)}");
 
         var state = h.Verdict switch { HealthVerdict.Excellent => CheckState.Pass, HealthVerdict.Ok => CheckState.Warn, _ => CheckState.Fail };
         var left = new StackPanel { Margin = new Thickness(0, 0, 32, 0), MinWidth = 140 };
         var score = new TextBlock { Text = h.Score.ToString() };
         score.SetResourceReference(StyleProperty, "Diag.Text.Display");
+        // The card (a Border) has no automation peer; the number does, so it carries the full sentence.
+        AutomationProperties.SetName(score, $"Health score {h.Score} of 100, {HealthScore.Label(h.Verdict)}");
         var of = new TextBlock { Text = "health score, out of 100", Margin = new Thickness(0, 0, 0, 8) };
         of.SetResourceReference(StyleProperty, "Diag.Text.Caption");
         left.Children.Add(score);
@@ -27,7 +28,15 @@ public sealed class ScoreCard : Border
         left.Children.Add(new StatusPill { Text = HealthScore.Label(h.Verdict), State = state });
 
         var right = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        if (h.Deductions.Count == 0)
+        // Before any test, the score only reflects what the startup scan found; don't let it read as a clean bill.
+        bool nothingTested = h.NotTested.Count == HealthScore.Expected.Length;
+        if (nothingTested)
+        {
+            var note = Body("No tests run yet, so this score only covers battery wear, drive health and driver problems.");
+            note.Margin = new Thickness(0, 0, 0, h.Deductions.Count > 0 ? 6 : 0);
+            right.Children.Add(note);
+        }
+        else if (h.Deductions.Count == 0)
             right.Children.Add(Body("No problems found in the tests that were run."));
         foreach (var d in h.Deductions.Take(maxDeductions))
         {
@@ -42,8 +51,8 @@ public sealed class ScoreCard : Border
             right.Children.Add(row);
         }
         if (h.Deductions.Count > maxDeductions)
-            right.Children.Add(Caption($"and {h.Deductions.Count - maxDeductions} more in the report."));
-        if (h.NotTested.Count > 0)
+            right.Children.Add(Caption($"{h.Deductions.Count - maxDeductions} more in the full report."));
+        if (h.NotTested.Count > 0 && !nothingTested)   // listing all of them repeats "No tests run yet"
             right.Children.Add(Caption($"Not tested: {string.Join(", ", h.NotTested)}."));
 
         var grid = new Grid();

@@ -57,8 +57,8 @@ public partial class TestsPage : UserControl
         foreach (var card in _cards) card.Refresh(_window.Session);
         StressResults.ItemsSource = new[] { (TestIds.Cpu, "Processor"), (TestIds.Memory, "Memory"), (TestIds.SurfaceScan, "Disk surface scan") }
             .Select(p => _window.Session[p.Item1] is { } r
-                ? new StressRow(Outcomes.Label(r.Outcome), Outcomes.State(r.Outcome), $"{p.Item2}: {r.Detail}")
-                : new StressRow("Not run", null, p.Item2))
+                ? new StressRow(p.Item2, Outcomes.Label(r.Outcome), Outcomes.State(r.Outcome), r.Detail)
+                : new StressRow(p.Item2, Outcomes.Label(null), null, null))
             .ToList();
     }
 
@@ -74,5 +74,11 @@ public partial class TestsPage : UserControl
 
     private void RunAll_Click(object sender, RoutedEventArgs e) => _window.StartAutomatic(StressPreset.Standard);
 
-    private sealed record StressRow(string Label, CheckState? State, string Text);
+    private sealed record StressRow(string Part, string Label, CheckState? State, string? Detail)
+    {
+        public string Text => string.IsNullOrEmpty(Detail) ? Part : $"{Part}: {Detail}";
+
+        /// <summary>What a screen reader says for the row (the list reads items by their ToString).</summary>
+        public override string ToString() => string.IsNullOrEmpty(Detail) ? $"{Part}: {Label}." : $"{Part}: {Label}. {Detail}";
+    }
 }

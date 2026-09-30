@@ -11,16 +11,33 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="{StaticResource Diag.Pad.Page}" MaxWidth="1240">
 
-            <!-- ===== Header: what machine is this ===== -->
-            <TextBlock Style="{StaticResource Diag.Text.Title}" Text="{Binding DeviceName}"
-                       AutomationProperties.HeadingLevel="Level1" />
-            <StackPanel Orientation="Horizontal" Margin="0,2,0,20">
-                <TextBlock Style="{StaticResource Diag.Text.Body}" VerticalAlignment="Center"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Subtitle}" />
-                <ui:Button x:Name="CopySerialButton" Appearance="Transparent" Padding="6" Margin="6,0,0,0"
-                           Icon="{ui:SymbolIcon Copy24}" ToolTip="Copy serial number"
-                           AutomationProperties.Name="Copy serial number" Click="CopySerial_Click" />
-            </StackPanel>
+            <!-- ===== Header: what machine is this, and its Windows 11 status (the detail card sits further down) ===== -->
+            <Grid Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Diag.Text.Title}" Text="{Binding DeviceName}"
+                               AutomationProperties.HeadingLevel="Level1" />
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                        <TextBlock Style="{StaticResource Diag.Text.Body}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Subtitle}" />
+                        <ui:Button x:Name="CopySerialButton" Appearance="Transparent" Padding="6" Margin="6,0,0,0"
+                                   Icon="{ui:SymbolIcon Copy24}" ToolTip="Copy serial number"
+                                   AutomationProperties.Name="Copy serial number" Click="CopySerial_Click" />
+                    </StackPanel>
+                </StackPanel>
+                <ui:Button Grid.Column="1" Appearance="Transparent" VerticalAlignment="Center" Margin="16,0,0,0" Padding="10,6"
+                           ToolTip="See the Windows 11 requirements" AutomationProperties.Name="{Binding Win11.Headline}"
+                           Click="Win11Details_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <c:StatusIcon State="{Binding Win11.State}" Size="20" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" FontSize="16" VerticalAlignment="Center"
+                                   Text="{Binding Win11.Headline}" />
+                    </StackPanel>
+                </ui:Button>
+            </Grid>
 
             <!-- ===== Banners ===== -->
             <Border x:Name="AdminBanner" Style="{StaticResource Diag.Banner.Warn}" Visibility="Collapsed">
@@ -56,7 +73,7 @@
                                    Text="Temperature and fan readings need the PawnIO sensor driver (signed, open source). Diagnostiq can install it now and offer to remove it when you close the app." />
                     </StackPanel>
                     <StackPanel x:Name="SensorActions" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
-                        <ui:Button x:Name="InstallSensorButton" Appearance="Primary" Content="Install driver" Click="InstallSensor_Click" />
+                        <ui:Button x:Name="InstallSensorButton" Content="Install driver" Click="InstallSensor_Click" />
                         <ui:Button Appearance="Transparent" Content="Not now" Margin="8,0,0,0" Click="DismissSensor_Click" />
                     </StackPanel>
                 </Grid>
@@ -133,7 +150,7 @@
                         <TextBlock DockPanel.Dock="Top" Style="{StaticResource Diag.Text.BodyStrong}" Text="Includes" Margin="0,16,0,6" />
                         <TextBlock DockPanel.Dock="Top" x:Name="IncludedTests" Style="{StaticResource Diag.Text.Body}" />
 
-                        <ui:Button DockPanel.Dock="Bottom" Content="Open test dashboard" Margin="0,20,0,0"
+                        <ui:Button DockPanel.Dock="Bottom" Content="Open manual tests" Margin="0,20,0,0"
                                    Icon="{ui:SymbolIcon Toolbox24}" MinHeight="40" Padding="16,8" Click="OpenManual_Click" />
                     </DockPanel>
                 </Border>

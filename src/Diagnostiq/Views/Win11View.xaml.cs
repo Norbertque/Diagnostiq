@@ -44,7 +44,8 @@ public partial class Win11View : UserControl
     private async void RestartFirmware_Click(object sender, RoutedEventArgs e)
     {
         var answer = await _window.AskAsync("Restart into BIOS setup?",
-            "The laptop restarts straight into its firmware settings. Save your work in other apps first.", "Restart now");
+            "The laptop restarts straight into BIOS setup and Diagnostiq closes. Save the report first if you need this session's results, and save your work in other apps.",
+            "Restart now");
         if (answer == ContentDialogResult.Primary) FirmwareProbe.RestartToFirmwareSetup();
     }
 
@@ -56,5 +57,18 @@ public partial class Win11View : UserControl
         public string? Hint => Check.Hint;
         public string HintLabel => Check.State == CheckState.Fail ? "How to fix: " : "Recommended: ";
         public Visibility HintVisibility => Check.Hint is null ? Visibility.Collapsed : Visibility.Visible;
+
+        /// <summary>What a screen reader says for the row (the list reads items by their ToString): the status included.</summary>
+        public override string ToString()
+        {
+            string status = State switch
+            {
+                CheckState.Pass => "met",
+                CheckState.Warn => "met, with a warning",
+                CheckState.Fail => "not met",
+                _ => "couldn't check",
+            };
+            return $"{Title}: {status}. {Detail}{(Hint is null ? "" : " " + HintLabel + Hint)}";
+        }
     }
 }

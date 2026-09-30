@@ -4,7 +4,7 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:c="clr-namespace:Diagnostiq.Controls">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="32,24,32,32" MaxWidth="1200">
+        <StackPanel Margin="32,24,32,32" MaxWidth="{StaticResource Diag.Page.MaxWidth}">
             <Grid Margin="0,0,0,20">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -15,7 +15,7 @@
                     <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0"
                                Text="Run any test on its own, as often as you like. The latest result of each goes into the report." />
                 </StackPanel>
-                <ui:Button Grid.Column="1" Appearance="Primary" Content="Run everything" Icon="{ui:SymbolIcon Play24}" MinHeight="40"
+                <ui:Button Grid.Column="1" Appearance="Primary" Content="Run automatic check" Icon="{ui:SymbolIcon Play24}" MinHeight="40"
                            VerticalAlignment="Center" Margin="16,0,0,0" Click="RunAll_Click" />
             </Grid>
 
@@ -27,28 +27,29 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Margin="0,0,24,0">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="Flash24" FontSize="20" Margin="0,2,12,0" VerticalAlignment="Top"
+                        <!-- DockPanel and WrapPanels, not horizontal StackPanels, so the caption and choices wrap in a narrow column. -->
+                        <DockPanel>
+                            <ui:SymbolIcon DockPanel.Dock="Left" Symbol="Flash24" FontSize="20" Margin="0,2,12,0" VerticalAlignment="Top"
                                            Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
                             <StackPanel>
                                 <TextBlock Style="{StaticResource Diag.Text.Subtitle}" Text="Stress test" FontSize="18" AutomationProperties.HeadingLevel="Level2" />
                                 <TextBlock Style="{StaticResource Diag.Text.Caption}" Text="Loads the chosen parts flat out and watches temperature and clock speed." />
                             </StackPanel>
-                        </StackPanel>
+                        </DockPanel>
                         <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" Text="Parts" Margin="32,16,0,4" />
-                        <StackPanel Orientation="Horizontal" Margin="32,0,0,0">
-                            <CheckBox x:Name="CpuCheck" Content="Processor" IsChecked="True" MinWidth="0" Margin="0,0,20,0" />
-                            <CheckBox x:Name="MemoryCheck" Content="Memory" IsChecked="True" MinWidth="0" Margin="0,0,20,0" />
-                            <CheckBox x:Name="ScanCheck" Content="Disk surface scan" IsChecked="True" MinWidth="0" />
-                        </StackPanel>
-                        <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" Text="Length" Margin="32,12,0,4" />
-                        <StackPanel Orientation="Horizontal" Margin="32,0,0,0">
-                            <RadioButton x:Name="QuickRadio" GroupName="ManualDuration" Content="2 min" MinWidth="0" Margin="0,0,20,0" />
-                            <RadioButton x:Name="StandardRadio" GroupName="ManualDuration" Content="5 min" IsChecked="True" MinWidth="0" Margin="0,0,20,0" />
-                            <RadioButton x:Name="ExtendedRadio" GroupName="ManualDuration" Content="15 min" MinWidth="0" />
-                        </StackPanel>
+                        <WrapPanel Margin="32,0,0,0">
+                            <CheckBox x:Name="CpuCheck" Content="Processor" IsChecked="True" MinWidth="0" Margin="0,0,20,4" />
+                            <CheckBox x:Name="MemoryCheck" Content="Memory" IsChecked="True" MinWidth="0" Margin="0,0,20,4" />
+                            <CheckBox x:Name="ScanCheck" Content="Disk surface scan" IsChecked="True" MinWidth="0" Margin="0,0,20,4" />
+                        </WrapPanel>
+                        <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" Text="Length" Margin="32,8,0,4" />
+                        <WrapPanel Margin="32,0,0,0">
+                            <RadioButton x:Name="QuickRadio" GroupName="ManualDuration" Content="2 min" MinWidth="0" Margin="0,0,20,4" />
+                            <RadioButton x:Name="StandardRadio" GroupName="ManualDuration" Content="5 min" IsChecked="True" MinWidth="0" Margin="0,0,20,4" />
+                            <RadioButton x:Name="ExtendedRadio" GroupName="ManualDuration" Content="15 min" MinWidth="0" Margin="0,0,20,4" />
+                        </WrapPanel>
                         <ui:Button x:Name="StressRun" Content="Run stress test" Icon="{ui:SymbolIcon Play24}" MinHeight="36"
-                                   Margin="32,16,0,0" Click="Stress_Click" />
+                                   Margin="32,12,0,0" Click="Stress_Click" />
                     </StackPanel>
                     <StackPanel Grid.Column="1">
                         <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" Text="Last results" Margin="0,4,0,8" />

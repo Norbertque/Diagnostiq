@@ -20,14 +20,15 @@
                 <ProgressBar x:Name="Bar" Height="4" VerticalAlignment="Center" Minimum="0"
                              AutomationProperties.Name="Progress" />
                 <TextBlock x:Name="Counter" Grid.Column="1" Style="{StaticResource Diag.Text.Caption}"
-                           Margin="12,0,0,0" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                           Margin="12,0,0,0" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular"
+                           AutomationProperties.LiveSetting="Polite" />
             </Grid>
 
             <Border Style="{StaticResource Diag.Card}" Padding="16,8">
                 <ItemsControl x:Name="StepList" Focusable="False">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Grid Margin="0,8" AutomationProperties.Name="{Binding Announcement}">
+                            <Grid Margin="0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
