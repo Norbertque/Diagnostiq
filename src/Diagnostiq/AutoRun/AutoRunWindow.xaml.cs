@@ -40,6 +40,8 @@ public partial class AutoRunWindow : Window
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) e.Handled = true; };
         Closing += OnClosing;
         ContentRendered += async (_, _) => { Activate(); await RunAsync(); };
+        Loaded += (_, _) => Interop.KeepAwake.Begin();   // no screen-off or sleep mid-test
+        Closed += (_, _) => Interop.KeepAwake.End();
     }
 
     /// <summary>Off for dev snapshots so captures don't catch a step mid-slide.</summary>

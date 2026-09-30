@@ -34,7 +34,7 @@ public partial class KeyboardStep : StepView
     {
         _iso = KeyLayout.DefaultIso();
         Build();
-        if (!Ctx.CaptureInput) return Task.CompletedTask;
+        if (!Ctx.LiveDevices) return Task.CompletedTask;
         _hook = new KeyboardHook();
         _hook.Key += OnKey;
         return Task.CompletedTask;

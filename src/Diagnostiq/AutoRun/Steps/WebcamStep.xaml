@@ -1,0 +1,36 @@
+<auto:StepView x:Class="Diagnostiq.AutoRun.Steps.WebcamStep"
+               xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+               xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+               xmlns:auto="clr-namespace:Diagnostiq.AutoRun">
+    <Grid Margin="48,32,48,32" MaxWidth="1240">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock Style="{StaticResource Diag.Text.Title}" Text="Camera" AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,6,0,4"
+                       Text="The picture should be sharp, with natural colours and no dark spots or lines. If it stays black, open the camera's privacy shutter or check for a camera key." />
+            <TextBlock x:Name="DeviceText" Style="{StaticResource Diag.Text.Caption}" />
+        </StackPanel>
+
+        <Border Grid.Row="1" Margin="0,20" CornerRadius="12" Background="Black" ClipToBounds="True">
+            <Grid>
+                <Image x:Name="Preview" Stretch="Uniform" RenderTransformOrigin="0.5,0.5" AutomationProperties.Name="Camera preview">
+                    <Image.RenderTransform>
+                        <ScaleTransform ScaleX="-1" />
+                    </Image.RenderTransform>
+                </Image>
+                <TextBlock x:Name="Overlay" Foreground="White" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           TextWrapping="Wrap" TextAlignment="Center" MaxWidth="520" Text="Starting the camera…" />
+            </Grid>
+        </Border>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal">
+            <ui:Button x:Name="SwitchButton" Content="Switch camera" Icon="{ui:SymbolIcon ArrowSync24}" Visibility="Collapsed"
+                       Focusable="False" Click="Switch_Click" />
+        </StackPanel>
+    </Grid>
+</auto:StepView>

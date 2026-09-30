@@ -1,0 +1,40 @@
+<auto:StepView x:Class="Diagnostiq.AutoRun.Steps.UsbStep"
+               xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+               xmlns:auto="clr-namespace:Diagnostiq.AutoRun"
+               xmlns:c="clr-namespace:Diagnostiq.Controls">
+    <StackPanel MaxWidth="880" Margin="48" VerticalAlignment="Center">
+        <TextBlock Style="{StaticResource Diag.Text.Title}" Text="USB ports" AutomationProperties.HeadingLevel="Level1" />
+        <TextBlock Style="{StaticResource Diag.Text.Body}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,6,0,24"
+                   Text="Plug a USB stick, mouse or phone into each USB port in turn, including USB-C, then unplug it. Use the same device every time so each port is counted once." />
+
+        <TextBlock x:Name="Count" Style="{StaticResource Diag.Text.Display}" Text="0" AutomationProperties.Name="Ports working" />
+        <TextBlock x:Name="CountLabel" Style="{StaticResource Diag.Text.Caption}" Text="ports working" Margin="0,0,0,20" />
+
+        <Border Style="{StaticResource Diag.Card}" Padding="20,8">
+            <StackPanel>
+                <TextBlock x:Name="Waiting" Style="{StaticResource Diag.Text.Body}" Margin="0,8" Text="Waiting for a USB device…" />
+                <ItemsControl x:Name="Log" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <c:StatusIcon State="{Binding State}" Margin="0,0,12,0" VerticalAlignment="Top" />
+                                <TextBlock Grid.Column="1" Style="{StaticResource Diag.Text.Body}" Text="{Binding Name}" />
+                                <TextBlock Grid.Column="2" Style="{StaticResource Diag.Text.Caption}" Text="{Binding Note}" Margin="12,0,0,0" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Diag.Card}" Margin="0,16,0,0">
+            <TextBlock Style="{StaticResource Diag.Text.BodyStrong}" Text="Did every port recognise the device? Choose Pass or Fail when you've tried them all." />
+        </Border>
+    </StackPanel>
+</auto:StepView>

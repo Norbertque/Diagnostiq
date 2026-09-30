@@ -64,6 +64,12 @@ public partial class MainWindow : FluentWindow
         new BrightnessStep(),
         new KeyboardStep(),
         new TouchpadStep(),
+        new SpeakersStep(),
+        new HeadphonesStep(),
+        new MicrophoneStep(),
+        new WebcamStep(),
+        new UsbStep(),
+        new ChargerStep(),
     ];
 
     /// <param name="steps">Defaults to the full run; the dev snapshot tool passes a subset.</param>
