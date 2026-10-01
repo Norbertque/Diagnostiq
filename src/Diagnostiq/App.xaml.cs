@@ -10,6 +10,7 @@ public partial class App : Application
     {
         base.OnStartup(e);
         DispatcherUnhandledException += OnUnhandledException;
+        Controls.SmoothScrolling.Register();
 
 #if DEBUG
         if (DevTools.AssetRenderer.TryParse(e.Args, out var assetDir))
