@@ -21,7 +21,7 @@ namespace Diagnostiq.AutoRun;
 public partial class AutoRunWindow : Window
 {
     /// <summary>How long a stopped run may take to wind down before the window closes anyway.</summary>
-    private static readonly TimeSpan StopGrace = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan StopGrace = TimeSpan.FromSeconds(10), AutomaticStopGrace = TimeSpan.FromSeconds(60);
 
     private readonly AutoRunContext _ctx;
     private readonly List<StepView> _steps;
@@ -274,9 +274,13 @@ public partial class AutoRunWindow : Window
     private async void Stop()
     {
         _runCts.Cancel();
-        await Task.Delay(StopGrace);
+        StepCounter.Text = "Stopping…";
+        // Measuring steps stop at their next check: the memory test finishes its pattern, a disk read on a
+        // bad sector can take a while. Closing early would lose their results and the summary, so they get longer.
+        var grace = _current?.Mode == StepMode.Automatic ? AutomaticStopGrace : StopGrace;
+        await Task.Delay(grace);
         if (_finished || _closed) return;
-        App.LogError(new TimeoutException($"The {_current?.Title ?? "current"} step didn't stop within {StopGrace.TotalSeconds:0} s."));
+        App.LogError(new TimeoutException($"The {_current?.Title ?? "current"} step didn't stop within {grace.TotalSeconds:0} s."));
         _closeAllowed = true;
         Close();
     }

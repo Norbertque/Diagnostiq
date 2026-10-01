@@ -15,7 +15,7 @@ public sealed record HealthReport(int Score, HealthVerdict Verdict, IReadOnlyLis
 {
     public bool HasCritical => Deductions.Any(d => d.Severity == Severity.Critical);
 
-    /// <summary>No test has a result yet (none run, or all skipped): the score then only covers battery wear, drive health and driver problems.</summary>
+    /// <summary>No test has a result yet (none run, or all skipped): the score then only reflects what the startup scan found (battery, drives, drivers, Bluetooth).</summary>
     public bool NothingTested { get; init; }
 }
 

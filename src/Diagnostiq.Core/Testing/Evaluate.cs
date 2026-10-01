@@ -35,7 +35,7 @@ public static class Evaluate
                 $"{m.Errors:N0} error{(m.Errors == 1 ? "" : "s")} found in {gb} tested. The memory is faulty and needs replacing.");
         if (m.Passes == 0)
             return new(TestIds.Memory, title, TestOutcome.Skipped, "Stopped before any memory was checked.");
-        if (r.Cancelled || m.Cancelled)
+        if (r.Cancelled)   // a part stopped after the full time has done its job
             return new(TestIds.Memory, title, TestOutcome.Skipped, $"Stopped early: {gb} checked, no errors so far.");
         return new(TestIds.Memory, title, TestOutcome.Pass, $"{gb} tested over {m.Passes} {(m.Passes == 1 ? "pass" : "passes")}, no errors.");
     }
@@ -49,7 +49,7 @@ public static class Evaluate
             return new(TestIds.SurfaceScan, title, TestOutcome.Fail,
                 $"{s.Errors:N0} unreadable area{(s.Errors == 1 ? "" : "s")} out of {s.ChunksRead:N0} read. " +
                 "The drive has bad sectors: back up your data and replace the drive.");
-        if (r.Cancelled || s.Cancelled)
+        if (r.Cancelled)
             return new(TestIds.SurfaceScan, title, TestOutcome.Skipped, $"Stopped early: {s.ChunksRead:N0} areas read, no errors so far.");
         return new(TestIds.SurfaceScan, title, TestOutcome.Pass, $"{s.ChunksRead:N0} areas read across the whole disk, no errors ({s.AvgMBps:0} MB/s average).");
     }

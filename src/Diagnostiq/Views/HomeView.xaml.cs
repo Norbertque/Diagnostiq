@@ -41,11 +41,20 @@ public partial class HomeView : UserControl
         // Named as on the Tests page and in the report. Non-breaking spaces/hyphen keep each name whole; the dot
         // stays with the item before it.
         string[] included = ["Processor under load", "Memory", "Disk surface scan", "Disk speed", "Screen", "Brightness", "Keyboard",
-                             "Touchpad", "Speakers", "Headphone jack", "Microphone", "Camera", "USB ports", "Charger", "Battery drain",
+                             "Touchpad", "Speakers", "Headphone jack", "Microphone", "Camera", "USB ports", "Charger", "Battery under load",
                              "Wi-Fi and internet"];
         IncludedTests.Text = string.Join(" · ", included.Select(t => t.Replace(' ', ' ').Replace('-', '‑')));
         StandardRadio.IsChecked = true;
-        SizeChanged += (_, e) => TileColumns = e.NewSize.Width >= 1060 ? 3 : e.NewSize.Width >= 700 ? 2 : 1;
+        SizeChanged += (_, e) =>
+        {
+            TileColumns = e.NewSize.Width >= 1060 ? 3 : e.NewSize.Width >= 700 ? 2 : 1;
+            // Narrow: the Windows 11 status goes under the title instead of squeezing the serial number row.
+            bool narrow = e.NewSize.Width < 1000;
+            Grid.SetRow(Win11HeaderButton, narrow ? 1 : 0);
+            Grid.SetColumn(Win11HeaderButton, narrow ? 0 : 1);
+            Win11HeaderButton.HorizontalAlignment = narrow ? HorizontalAlignment.Left : HorizontalAlignment.Stretch;
+            Win11HeaderButton.Margin = narrow ? new Thickness(0, 8, 0, 0) : new Thickness(16, 0, 0, 0);
+        };
         Loaded += (_, _) => { _window.SessionChanged += UpdateLastCheck; UpdateLastCheck(); };
         Unloaded += (_, _) => _window.SessionChanged -= UpdateLastCheck;
     }
@@ -57,9 +66,20 @@ public partial class HomeView : UserControl
         if (results.Count == 0) { LastCheckCard.Visibility = Visibility.Collapsed; return; }
 
         var health = HealthScore.Compute(_snapshot, _window.Session);
-        // Everything that cost points (battery, drive and driver problems too), so the line matches the score.
-        int problems = health.Deductions.Count;
+        LastCheckCard.Visibility = Visibility.Visible;
+        if (health.NothingTested)
+        {
+            // Only skipped tests: a score of 100 here would read as a clean bill of health.
+            LastCheckIcon.State = CheckState.Unknown;
+            LastCheckTitle.Text = "No tests finished yet";
+            LastCheckDetail.Text = "Everything run so far was skipped, so the score only reflects what the startup scan found.";
+            return;
+        }
+
+        // Counted the way the Automatic summary counts them; the score itself also covers battery, drive and drivers.
         int tested = results.Count(r => r.Outcome != TestOutcome.Skipped);
+        int failed = results.Count(r => r.Outcome == TestOutcome.Fail);
+        int warned = results.Count(r => r.Outcome == TestOutcome.Warn);
         LastCheckIcon.State = health.Verdict switch
         {
             HealthVerdict.Excellent => CheckState.Pass,
@@ -67,10 +87,12 @@ public partial class HomeView : UserControl
             _ => CheckState.Fail,
         };
         LastCheckTitle.Text = $"Health score {health.Score} · {HealthScore.Label(health.Verdict)}";
-        LastCheckDetail.Text = (tested == 0 ? "No tests run this session" : $"{tested} test{(tested == 1 ? "" : "s")} run this session") +
-                               (problems == 0 ? ", no problems found." : $", {problems} problem{(problems == 1 ? "" : "s")} found.") +
+        var outcome = new List<string>();
+        if (failed > 0) outcome.Add($"{failed} failed");
+        if (warned > 0) outcome.Add($"{warned} with warnings");
+        LastCheckDetail.Text = $"{tested} test{(tested == 1 ? "" : "s")} run this session, " +
+                               (outcome.Count == 0 ? "all passed." : string.Join(", ", outcome) + ".") +
                                (health.NotTested.Count > 0 ? $" {health.NotTested.Count} not tested yet." : "");
-        LastCheckCard.Visibility = Visibility.Visible;
     }
 
     private void ViewReport_Click(object sender, RoutedEventArgs e) => _window.ShowManual("report");

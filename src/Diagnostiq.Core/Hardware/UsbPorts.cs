@@ -21,7 +21,7 @@ public sealed partial class UsbPortWatcher : IDisposable
 
     public UsbPortWatcher()
     {
-        _tracker = new UsbPortTracker(PresentDevices());   // webcam, Bluetooth, fingerprint reader…
+        _tracker = new UsbPortTracker(PresentDevices() ?? []);   // webcam, Bluetooth, fingerprint reader…
         _timer = new Timer(_ => Poll(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
@@ -32,7 +32,8 @@ public sealed partial class UsbPortWatcher : IDisposable
         if (Interlocked.Exchange(ref _busy, 1) == 1) return;
         try
         {
-            foreach (var arrival in _tracker.Update(PresentDevices())) Arrived?.Invoke(arrival);
+            if (PresentDevices() is not { } present) return;   // enumeration failed: no data, not "everything unplugged"
+            foreach (var arrival in _tracker.Update(present)) Arrived?.Invoke(arrival);
         }
         finally { Volatile.Write(ref _busy, 0); }
     }
@@ -62,12 +63,13 @@ public sealed partial class UsbPortWatcher : IDisposable
         public nint Reserved;
     }
 
-    internal static List<(string InstanceId, string Name, string? Port)> PresentDevices()
+    /// <summary>The present USB devices, or null when SetupAPI couldn't list them.</summary>
+    internal static List<(string InstanceId, string Name, string? Port)>? PresentDevices()
     {
         var list = new List<(string, string, string?)>();
         var guid = UsbDeviceInterface;
         nint set = SetupDiGetClassDevsW(ref guid, null, 0, DigcfPresent | DigcfDeviceInterface);
-        if (set == -1) return list;
+        if (set == -1) return null;
         try
         {
             var info = new SpDevInfoData { Size = Marshal.SizeOf<SpDevInfoData>() };
@@ -124,12 +126,18 @@ public sealed partial class UsbPortWatcher : IDisposable
 /// </summary>
 internal sealed class UsbPortTracker
 {
-    private readonly HashSet<string> _baseline;   // plugged in before the step: counts only after a replug
+    /// <summary>
+    /// A device plugged in before the step must be missing this many polls in a row before a replug counts,
+    /// so a built-in camera or Bluetooth radio that blinks off for a moment isn't counted as a tested port.
+    /// </summary>
+    internal const int BaselineMissesToForget = 2;
+
+    private readonly Dictionary<string, int> _baseline;   // plugged in before the step → polls missed in a row
     private readonly HashSet<string> _seen = [];
     private readonly HashSet<string> _ports = [];
 
     public UsbPortTracker(IEnumerable<(string InstanceId, string Name, string? Port)> atStart) =>
-        _baseline = [.. atStart.Select(Key)];
+        _baseline = atStart.Select(Key).Distinct().ToDictionary(k => k, _ => 0);
 
     public int PortCount { get { lock (_ports) return _ports.Count; } }
 
@@ -138,13 +146,17 @@ internal sealed class UsbPortTracker
     {
         // Forget unplugged devices, so plugging one back in, in this port or another, counts again.
         var keys = present.Select(Key).ToHashSet();
-        _baseline.IntersectWith(keys);
+        foreach (var key in _baseline.Keys.ToList())
+        {
+            if (keys.Contains(key)) _baseline[key] = 0;
+            else if (++_baseline[key] >= BaselineMissesToForget) _baseline.Remove(key);
+        }
         _seen.IntersectWith(keys);
 
         var arrivals = new List<UsbArrival>();
         foreach (var d in present)
         {
-            if (d.Port is null || _baseline.Contains(Key(d)) || !_seen.Add(Key(d))) continue;
+            if (d.Port is null || _baseline.ContainsKey(Key(d)) || !_seen.Add(Key(d))) continue;
             bool isNew;
             lock (_ports) isNew = _ports.Add(d.Port);
             arrivals.Add(new UsbArrival(d.InstanceId, d.Name, d.Port, isNew));

@@ -14,6 +14,10 @@ namespace Diagnostiq.Theme;
 public static class ThemeService
 {
     private const string InfoForegroundKey = "Diag.InfoForegroundBrush";
+
+    /// <summary>Text on a solid status fill (a key that worked in the keyboard test). Text-on-accent normally;
+    /// in high contrast the fill is the text colour, so the label takes the window colour.</summary>
+    public const string OnStatusFillKey = "Diag.OnStatusFillBrush";
     private static readonly Color InfoLight = Color.FromRgb(0x00, 0x5F, 0xB7); // 6.08:1
     private static readonly Color InfoDark = Color.FromRgb(0x99, 0xEB, 0xFF);  // 5.93:1
 
@@ -51,6 +55,10 @@ public static class ThemeService
             if (highContrast) resources[key] = SystemColors.WindowTextBrush; else resources.Remove(key);
         foreach (var key in StatusBackgroundKeys)
             if (highContrast) resources[key] = SystemColors.WindowBrush; else resources.Remove(key);
+
+        resources[OnStatusFillKey] = highContrast
+            ? SystemColors.WindowBrush
+            : Application.Current.TryFindResource("TextOnAccentFillColorPrimaryBrush") ?? SystemColors.HighlightTextBrush;
 
         if (highContrast)
         {

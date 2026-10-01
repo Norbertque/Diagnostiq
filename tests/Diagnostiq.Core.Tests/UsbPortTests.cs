@@ -42,10 +42,20 @@ public class UsbPortTests
         Assert.Empty(tracker.Update([Dev(Stick, PortA)]));
         Assert.Equal(0, tracker.PortCount);
 
-        Assert.Empty(tracker.Update(Nothing));
+        for (int i = 0; i < UsbPortTracker.BaselineMissesToForget; i++) Assert.Empty(tracker.Update(Nothing));
         var arrival = Assert.Single(tracker.Update([Dev(Stick, PortA)]));
         Assert.Equal(PortA, arrival.Port);
         Assert.Equal(1, tracker.PortCount);
+    }
+
+    [Fact]
+    public void Built_in_device_missing_for_one_poll_isnt_counted_as_a_port()
+    {
+        // A Bluetooth radio reset or a camera privacy switch can make a built-in device vanish for a moment.
+        var tracker = new UsbPortTracker([Dev(Webcam, Internal)]);
+        Assert.Empty(tracker.Update(Nothing));
+        Assert.Empty(tracker.Update([Dev(Webcam, Internal)]));
+        Assert.Equal(0, tracker.PortCount);
     }
 
     [Fact]
@@ -74,6 +84,7 @@ public class UsbPortTests
     {
         // Internal webcams, Bluetooth radios and fingerprint readers are USB devices on almost every laptop.
         var devices = UsbPortWatcher.PresentDevices();
+        Assert.NotNull(devices);
         Assert.NotEmpty(devices);
         Assert.All(devices, d => Assert.False(string.IsNullOrEmpty(d.InstanceId)));
         Assert.Contains(devices, d => d.Port is not null);

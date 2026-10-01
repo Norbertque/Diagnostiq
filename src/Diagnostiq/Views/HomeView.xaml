@@ -17,18 +17,23 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <StackPanel>
                     <TextBlock Style="{StaticResource Diag.Text.Title}" Text="{Binding DeviceName}"
                                AutomationProperties.HeadingLevel="Level1" />
-                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                    <!-- Wraps, so the Copy button never ends up clipped off a narrow window. -->
+                    <WrapPanel Margin="0,2,0,0">
                         <TextBlock Style="{StaticResource Diag.Text.Body}" VerticalAlignment="Center"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Subtitle}" />
                         <ui:Button x:Name="CopySerialButton" Appearance="Transparent" Padding="6" Margin="6,0,0,0"
                                    Icon="{ui:SymbolIcon Copy24}" ToolTip="Copy serial number"
                                    AutomationProperties.Name="Copy serial number" Click="CopySerial_Click" />
-                    </StackPanel>
+                    </WrapPanel>
                 </StackPanel>
-                <ui:Button Grid.Column="1" Appearance="Transparent" VerticalAlignment="Center" Margin="16,0,0,0" Padding="10,6"
+                <ui:Button x:Name="Win11HeaderButton" Grid.Column="1" Appearance="Transparent" VerticalAlignment="Center" Margin="16,0,0,0" Padding="10,6"
                            ToolTip="See the Windows 11 requirements" AutomationProperties.Name="{Binding Win11.Headline}"
                            Click="Win11Details_Click">
                     <StackPanel Orientation="Horizontal">

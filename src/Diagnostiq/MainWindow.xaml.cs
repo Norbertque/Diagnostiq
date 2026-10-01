@@ -30,20 +30,29 @@ public partial class MainWindow : FluentWindow
         InitializeComponent();
         _snackbar.SetSnackbarPresenter(SnackbarHost);
         Closing += OnClosing;
-        FitToWorkArea();
+        SourceInitialized += (_, _) => FitToWorkArea();
     }
 
     /// <summary>
     /// Small screens (1366×768, or 1080p at 150 %) are shorter than the default size: never open larger
-    /// than the work area, where the title bar could end up off-screen, and start maximised when it's short.
+    /// than the work area of the monitor the window opens on, where the title bar could end up off-screen,
+    /// and start maximised when it's short. Measured once the window has a handle, so it's that monitor
+    /// at its own scale, not the primary one.
     /// </summary>
     private void FitToWorkArea()
     {
-        var area = SystemParameters.WorkArea;
+        if (WindowStartupLocation != WindowStartupLocation.CenterScreen) return;   // placed by the caller (dev snapshots)
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        if (Interop.MonitorWorkArea.Of(hwnd) is not { } px) return;
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var area = new Rect(px.X / dpi.DpiScaleX, px.Y / dpi.DpiScaleY, px.Width / dpi.DpiScaleX, px.Height / dpi.DpiScaleY);
+
         MinWidth = Math.Min(MinWidth, area.Width);
         MinHeight = Math.Min(MinHeight, area.Height);
         Width = Math.Min(Width, area.Width - 16);
         Height = Math.Min(Height, area.Height - 16);
+        Left = area.Left + (area.Width - Width) / 2;
+        Top = area.Top + (area.Height - Height) / 2;
         if (area.Height < 800) WindowState = WindowState.Maximized;
     }
 

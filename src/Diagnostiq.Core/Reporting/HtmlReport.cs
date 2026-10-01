@@ -43,7 +43,7 @@ public static class HtmlReport
         h.Append("<section><h2>Summary</h2>");
         // Without tests a high score mustn't read as a clean bill of health.
         if (m.Health.NothingTested)
-            h.Append("<p>No tests run yet, so this score only covers battery wear, drive health and driver problems.</p>");
+            h.Append("<p>No tests run yet, so this score only reflects what the startup scan found.</p>");
         else if (m.Health.Deductions.Count == 0)
             h.Append("<p>No problems found in the tests that were run.</p>");
         if (m.Health.Deductions.Count > 0)

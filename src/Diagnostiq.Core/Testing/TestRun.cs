@@ -85,9 +85,14 @@ public sealed class TestRun
         Recorded?.Invoke(result);
     }
 
-    /// <summary>Keeps <paramref name="report"/> unless it was stopped early and a complete run is already recorded.</summary>
+    /// <summary>
+    /// Keeps <paramref name="report"/> unless it was stopped early, found nothing wrong, and a complete run is
+    /// already recorded. A stopped run that found a fault is kept, so the report's chart matches its verdict.
+    /// </summary>
     public void RecordStress(StressReport report)
     {
-        if (!report.Cancelled || Stress is null or { Cancelled: true }) Stress = report;
+        if (!report.Cancelled || Stress is null or { Cancelled: true }
+            || Evaluate.Stress(report).Any(r => r.Outcome is TestOutcome.Fail or TestOutcome.Warn))
+            Stress = report;
     }
 }

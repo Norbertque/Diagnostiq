@@ -226,6 +226,24 @@ public class TestRunMergeTests
     }
 
     [Fact]
+    public void Stopped_stress_run_that_found_a_fault_replaces_a_clean_one()
+    {
+        // The report's chart must match its verdict: a stopped re-run that found memory errors is the one to keep.
+        var run = new TestRun();
+        run.RecordStress(Stress(cancelled: false));
+        var faulty = Stress(cancelled: true) with { Memory = new MemoryTestResult(1L << 30, 1, 3, TimeSpan.FromSeconds(20), true) };
+        run.RecordStress(faulty);
+        Assert.Same(faulty, run.Stress);
+    }
+
+    [Fact]
+    public void Run_that_reached_its_full_time_isnt_stopped_early_even_if_memory_was_cut_short()
+    {
+        var report = Stress(cancelled: false) with { Memory = new MemoryTestResult(8L << 30, 3, 0, TimeSpan.FromMinutes(5), Cancelled: true) };
+        Assert.Equal(TestOutcome.Pass, Evaluate.Stress(report).Single(r => r.Id == TestIds.Memory).Outcome);
+    }
+
+    [Fact]
     public void Stopped_stress_run_is_kept_when_there_is_nothing_better()
     {
         var run = new TestRun();

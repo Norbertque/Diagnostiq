@@ -76,7 +76,10 @@ public partial class DisplayStep : StepView
         Question.Visibility = Visibility.Visible;
         StartButton.Content = "Show again";
         StartButton.Appearance = Wpf.Ui.Controls.ControlAppearance.Secondary;
-        StartButton.Focus();   // keyboard users continue from here; Tab reaches Pass and Fail
+        // Focus the question, not "Show again": one Space too many would restart all the colours.
+        Question.Focusable = true;
+        Question.FocusVisualStyle = null;
+        Question.Focus();   // Tab goes on to Pass and Fail
     }
 
     protected override string? Detail(TestOutcome outcome) => outcome switch

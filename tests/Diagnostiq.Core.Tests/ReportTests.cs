@@ -46,7 +46,7 @@ public class ReportTests
         Assert.True(model.Health.NothingTested);
 
         var html = HtmlReport.Render(model);
-        Assert.Contains("No tests run yet, so this score only covers battery wear, drive health and driver problems.", html);
+        Assert.Contains("No tests run yet, so this score only reflects what the startup scan found.", html);
         Assert.DoesNotContain("No problems found", html);
     }
 

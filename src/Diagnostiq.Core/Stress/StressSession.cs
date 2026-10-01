@@ -114,6 +114,8 @@ public sealed class StressSession(SensorService? sensors, int? scanDisk, TimeSpa
             {
                 cpu.Stop();
             }
+            // Skip pressed at 0:00 while the memory test finishes its last pattern still counts as a full run.
+            bool stoppedEarly = ct.IsCancellationRequested && sw.Elapsed < duration;
 
             MemoryTestResult? memory = null;
             string? memorySkipped = null;
@@ -132,7 +134,7 @@ public sealed class StressSession(SensorService? sensors, int? scanDisk, TimeSpa
             }
 
             var temps = samples.Where(s => s.CpuTempC is not null).Select(s => s.CpuTempC!.Value).ToList();
-            return new StressReport(sw.Elapsed, ct.IsCancellationRequested, samples,
+            return new StressReport(sw.Elapsed, stoppedEarly, samples,
                 temps.Count > 0 ? temps.Max() : null,
                 temps.Count > 0 ? temps.Average() : null,
                 samples.Any(s => s.TempLimited),

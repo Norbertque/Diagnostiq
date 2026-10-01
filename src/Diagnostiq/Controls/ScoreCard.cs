@@ -32,7 +32,7 @@ public sealed class ScoreCard : Border
         bool nothingTested = h.NothingTested;
         if (nothingTested)
         {
-            var note = Body("No tests run yet, so this score only covers battery wear, drive health and driver problems.");
+            var note = Body("No tests run yet, so this score only reflects what the startup scan found.");
             note.Margin = new Thickness(0, 0, 0, h.Deductions.Count > 0 ? 6 : 0);
             right.Children.Add(note);
         }

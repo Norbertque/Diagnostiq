@@ -63,9 +63,14 @@ public static class WindowsStatus
         }
         catch (System.Management.ManagementException) { }
 
-        // No product row usually means the licensing service answered before it was ready, not
-        // that Windows has no licence; "not activated" would send a refurbisher to re-key a good machine.
-        if (p is null) return new ActivationInfo(LicenseState.Unknown, null, firmware);
+        if (p is null)
+        {
+            // Windows products listed but none holds a key: the key was removed (slmgr /upk), so Windows
+            // really isn't activated. No Windows products at all means the licensing service answered
+            // before it was ready; "not activated" would then send a refurbisher to re-key a good machine.
+            bool listed = Wmi.First($"SELECT ID FROM SoftwareLicensingProduct WHERE ApplicationID='{WindowsAppId}'") is not null;
+            return new ActivationInfo(listed ? LicenseState.Unlicensed : LicenseState.Unknown, null, firmware);
+        }
         return new ActivationInfo(LicenseStateFrom(p.Int("LicenseStatus")), Channel(p.Str("ProductKeyChannel")), firmware);
     }
 

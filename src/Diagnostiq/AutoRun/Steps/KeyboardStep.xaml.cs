@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using Diagnostiq.AutoRun.Keyboard;
 using Diagnostiq.Core.Testing;
 using Diagnostiq.Interop;
@@ -27,8 +28,9 @@ public partial class KeyboardStep : StepView
     private readonly Dictionary<(int, bool), DateTime> _firstSeen = [];
     private readonly SortedSet<string> _others = [];
     private KeyboardHook? _hook;
-    private DateTime? _escHeldSince;
-    private bool _iso, _finishing;
+    private DispatcherTimer? _escHold;
+    private DateTime _hookStarted;
+    private bool _iso, _finishing, _escReleasedOnce, _endedByEsc;
 
     public KeyboardStep() => InitializeComponent();
 
@@ -42,7 +44,36 @@ public partial class KeyboardStep : StepView
         if (!Ctx.LiveDevices) return Task.CompletedTask;
         _hook = new KeyboardHook();
         _hook.Key += OnKey;
+        _hookStarted = DateTime.UtcNow;
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// A timer, not key repeats, so it also works with auto-repeat off. An Esc that is already down when
+    /// the test starts (a stuck key) doesn't count until it has been released once.
+    /// </summary>
+    private void OnEsc(bool down)
+    {
+        if (!down)
+        {
+            _escReleasedOnce = true;
+            _escHold?.Stop();
+            return;
+        }
+        if (_escHold is { IsEnabled: true }) return;   // auto-repeat of the same hold
+        if (!_escReleasedOnce && DateTime.UtcNow - _hookStarted < TimeSpan.FromMilliseconds(500)) return;
+        _escHold ??= new DispatcherTimer(EscHoldToFail, DispatcherPriority.Normal, (_, _) => EndByEsc(), Dispatcher) { IsEnabled = false };
+        _escHold.Start();
+    }
+
+    private void EndByEsc()
+    {
+        _escHold?.Stop();
+        if (_hook is null) return;   // the step already ended
+        _endedByEsc = true;
+        _done.Add((EscScan, false));   // Esc evidently works: it's what ended the test
+        Paint((EscScan, false), pressed: false);
+        Ctx.Judge(TestOutcome.Fail);
     }
 
     private void Build()
@@ -128,12 +159,8 @@ public partial class KeyboardStep : StepView
     {
         if (_hook is null) return;   // queued before the step ended: must not judge the next one
 
-        // Holding Esc repeats its key-down; after 2 s the keyboard is failed (Detail lists the missing keys).
-        if (e.Scan == EscScan && !e.Extended)
-        {
-            if (!e.Down) _escHeldSince = null;
-            else if (DateTime.UtcNow - (_escHeldSince ??= DateTime.UtcNow) >= EscHoldToFail) { Ctx.Judge(TestOutcome.Fail); return; }
-        }
+        // Holding Esc for 2 s fails the keyboard: the keyboard-only way out of this step.
+        if (e.Scan == EscScan && !e.Extended) OnEsc(e.Down);
 
         var id = (e.Scan, e.Extended);
         if (e.Vk == 0xA1) id = (0x36, false);          // right Shift reports odd flags on some boards
@@ -175,7 +202,8 @@ public partial class KeyboardStep : StepView
             string stroke = done && !pressed ? "SystemFillColorSuccessBrush" : "ControlStrongStrokeColorDefaultBrush";
             b.SetResourceReference(Border.BackgroundProperty, bg);
             b.SetResourceReference(Border.BorderBrushProperty, stroke);
-            ((TextBlock)b.Child).SetResourceReference(TextBlock.ForegroundProperty, pressed || done ? "TextOnAccentFillColorPrimaryBrush" : "TextFillColorPrimaryBrush");
+            ((TextBlock)b.Child).SetResourceReference(TextBlock.ForegroundProperty,
+                pressed ? "TextOnAccentFillColorPrimaryBrush" : done ? Theme.ThemeService.OnStatusFillKey : "TextFillColorPrimaryBrush");
         }
     }
 
@@ -224,6 +252,9 @@ public partial class KeyboardStep : StepView
         int done = _required.Count(_done.Contains);
         var missing = MissingNames();
         string summary = missing.Count == 0 ? $"All {_required.Count} keys worked." : $"{done} of {_required.Count} keys worked.";
+        if (_endedByEsc)   // the user gave up: the rest weren't necessarily tried, so don't call them broken
+            return $"{summary} Ended early by holding Esc." +
+                   (missing.Count > 0 ? $" Not pressed: {string.Join(", ", missing.Take(15))}{(missing.Count > 15 ? ", …" : "")}." : "");
         return outcome == TestOutcome.Fail && missing.Count > 0
             ? $"{summary} Not working: {string.Join(", ", missing.Take(15))}{(missing.Count > 15 ? ", …" : "")}."
             : summary;
@@ -231,6 +262,7 @@ public partial class KeyboardStep : StepView
 
     public override void Cleanup()
     {
+        _escHold?.Stop();
         if (_hook is not null) _hook.Key -= OnKey;
         _hook?.Dispose();
         _hook = null;
