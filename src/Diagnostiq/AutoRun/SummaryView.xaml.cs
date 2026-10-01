@@ -15,6 +15,8 @@ namespace Diagnostiq.AutoRun;
 public partial class SummaryView : UserControl
 {
     private SavedReport? _saved;
+    private readonly SystemSnapshot _snapshot;
+    private readonly TestRun _all;
 
     /// <summary>The one-line verdict ("2 problems found"), for the window to announce.</summary>
     public string Headline => Heading.Text;
@@ -37,6 +39,8 @@ public partial class SummaryView : UserControl
                           Format.Minutes(DateTimeOffset.Now - run.Started);
 
         var all = session is null ? run : Reports.Combine(session, run);
+        _snapshot = snapshot;
+        _all = all;
         ScoreHost.Content = new ScoreCard(HealthScore.Compute(snapshot, all));
 
         AddCount(pass, "passed", CheckState.Pass);
@@ -56,7 +60,7 @@ public partial class SummaryView : UserControl
             _saved = await Reports.SaveAsync(snapshot, all);
             ReportTitle.Text = "Report saved";
             ReportPath.Text = Path.GetDirectoryName(_saved.HtmlPath);
-            ReportActions.Visibility = Visibility.Visible;
+            OpenButton.Visibility = FolderButton.Visibility = Visibility.Visible;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -68,6 +72,27 @@ public partial class SummaryView : UserControl
 
     private void OpenReport_Click(object sender, RoutedEventArgs e) { if (_saved is not null) Reports.Open(_saved.HtmlPath); }
     private void ShowFolder_Click(object sender, RoutedEventArgs e) { if (_saved is not null) Reports.ShowInFolder(_saved.HtmlPath); }
+
+    private async void Download_Click(object sender, RoutedEventArgs e)
+    {
+        DownloadButton.IsEnabled = false;
+        try
+        {
+            if (await Reports.DownloadAsync(Window.GetWindow(this), _snapshot, _all) is { } path)
+            {
+                ReportTitle.Text = "Report downloaded";
+                ReportPath.Text = path;
+                ReportPath.TextTrimming = TextTrimming.CharacterEllipsis;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ReportTitle.Text = "Couldn't download the report";
+            ReportPath.Text = $"{ex.Message} Choose another folder, or check that the drive isn't full or write-protected.";
+            ReportPath.TextTrimming = TextTrimming.None;
+        }
+        finally { DownloadButton.IsEnabled = true; }
+    }
 
     private void AddCount(int n, string label, CheckState? state)
     {

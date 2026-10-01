@@ -34,14 +34,38 @@ public sealed class ReportPage : UserControl
         var snapshot = _window.Snapshot!;
         _page.Children.Add(new ScoreCard(Core.Scoring.HealthScore.Compute(snapshot, _window.Session)));
         // Same size and icon as the other primary actions (Start automatic check, the summary's Open report).
+        // Open saves into the Reports folder and shows it in the browser; Download puts a copy where the user chooses.
         var save = new Wpf.Ui.Controls.Button
         {
-            Content = "Save and open report",
+            Content = "Open report",
             Appearance = ControlAppearance.Primary,
             Icon = new SymbolIcon(SymbolRegular.Open24),
             MinHeight = 40,
             Padding = new Thickness(16, 8, 16, 8),
-            Margin = new Thickness(0, 0, 0, 16),
+            Margin = new Thickness(0, 0, 8, 0),
+        };
+        var download = new Wpf.Ui.Controls.Button
+        {
+            Content = "Download report",
+            Icon = new SymbolIcon(SymbolRegular.ArrowDownload24),
+            MinHeight = 40,
+            Padding = new Thickness(16, 8, 16, 8),
+            ToolTip = "Save a copy wherever you like, such as Downloads or a USB stick",
+        };
+        download.Click += async (_, _) =>
+        {
+            download.IsEnabled = false;
+            try
+            {
+                if (await Reports.DownloadAsync(_window, snapshot, _window.Session) is { } path)
+                    _window.Notify("Report downloaded", path, icon: SymbolRegular.CheckmarkCircle24, timeout: TimeSpan.FromSeconds(8));
+            }
+            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+            {
+                _window.Notify("Couldn't download the report", $"{ex.Message} Choose another folder, or check that the drive isn't full or write-protected.",
+                    icon: SymbolRegular.ErrorCircle24, timeout: TimeSpan.FromSeconds(15));
+            }
+            finally { download.IsEnabled = true; }
         };
         save.Click += async (_, _) =>
         {
@@ -60,7 +84,7 @@ public sealed class ReportPage : UserControl
                     icon: SymbolRegular.ErrorCircle24, timeout: TimeSpan.FromSeconds(15));
             }
         };
-        _page.Children.Add(save);
+        _page.Children.Add(new WrapPanel { Margin = new Thickness(0, 0, 0, 16), Children = { save, download } });
 
         var results = new DetailSection("Results so far");
         var list = _window.Session.Results;

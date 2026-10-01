@@ -74,6 +74,25 @@ public class ReportTests
         finally { Directory.Delete(dir, true); }
     }
 
+    [Fact]
+    public void Download_writes_the_page_or_the_data_by_extension()
+    {
+        var dir = Directory.CreateTempSubdirectory("diag-download").FullName;
+        try
+        {
+            var page = Path.Combine(dir, "report.html");
+            var data = Path.Combine(dir, "report.JSON");
+            ReportWriter.SaveAs(Sample(), page);
+            ReportWriter.SaveAs(Sample(), data);
+            var html = File.ReadAllText(page);
+            Assert.StartsWith("<!doctype html>", html);
+            Assert.Contains("window.print()", html);   // the Print or save as PDF button
+            using var doc = JsonDocument.Parse(File.ReadAllText(data));
+            Assert.Equal(70, doc.RootElement.GetProperty("health").GetProperty("score").GetInt32());
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     [Theory]
     [InlineData("Dell Latitude 7430", "52C2YT3", "2026-09-30 1412 Dell Latitude 7430 52C2YT3")]
     [InlineData("HP EliteBook 840 G5/G6", null, "2026-09-30 1412 HP EliteBook 840 G5-G6")]

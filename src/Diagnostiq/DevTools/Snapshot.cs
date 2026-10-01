@@ -40,6 +40,7 @@ internal static class Snapshot
         if (v >= 0 && v + 1 < args.Length) view = args[v + 1].ToLowerInvariant();
         _fullPage = args.Contains("--full");
         _seedSession = args.Contains("--session");
+        _liveDevices = args.Contains("--live");
         int f = Array.IndexOf(args, "--from");
         if (f >= 0 && f + 1 < args.Length) _fromStep = args[f + 1];
         int d = Array.IndexOf(args, "--delay");
@@ -52,6 +53,9 @@ internal static class Snapshot
 
     // --session: pre-fill the session with sample results (Home "last check" card, Tests and Report pages).
     private static bool _seedSession;
+
+    // --live (skipspam only): run the steps with the real keyboard hook, sound, microphone and camera.
+    private static bool _liveDevices;
 
     // --view auto: --from StepClassName starts the run at that step; --delay seconds before capturing.
     private static string? _fromStep;
@@ -109,26 +113,82 @@ internal static class Snapshot
                     List<AutoRun.StepView> steps = view == "auto-summary"
                         ? [new SampleResultsStep()]
                         : MainWindow.AutomaticSteps().SkipWhile(s => _fromStep is not null && s.GetType().Name != _fromStep).ToList();
-                    var run = window.StartAutomatic(Core.Stress.StressPreset.Quick, steps, w =>
-                    {
-                        // Normal, not maximized/topmost, and off-screen: nothing covers the desktop.
-                        w.WindowState = WindowState.Normal;
-                        w.Topmost = false;
-                        w.WindowStartupLocation = WindowStartupLocation.Manual;
-                        w.Left = -10000;
-                        w.Top = 0;
-                        w.Width = size.Width;
-                        w.Height = size.Height;
-                        w.ShowActivated = false;
-                        w.AnimationsEnabled = false;
-                        w.Context.LiveDevices = false;   // no keyboard hook, sound, microphone or camera while capturing
-                    });
+                    var run = window.StartAutomatic(Core.Stress.StressPreset.Quick, steps, w => OffScreen(w, size));
                     var wait = new DispatcherTimer { Interval = view == "auto-summary" ? TimeSpan.FromSeconds(1.5) : _delay };
                     wait.Tick += (_, _) => { wait.Stop(); Save(run, run.Stage, path); };
                     wait.Start();
                     break;
+                case ("skipspam", "HomeView"):
+                    SkipSpam(window, size);
+                    break;
             }
         };
+    }
+
+    /// <summary>Normal, not maximized or topmost, and off-screen: nothing covers the desktop.</summary>
+    private static void OffScreen(AutoRun.AutoRunWindow w, Size size)
+    {
+        w.WindowState = WindowState.Normal;
+        w.Topmost = false;
+        w.WindowStartupLocation = WindowStartupLocation.Manual;
+        w.Left = -10000;
+        w.Top = 0;
+        w.Width = size.Width;
+        w.Height = size.Height;
+        w.ShowActivated = false;
+        w.AnimationsEnabled = false;
+        w.Context.LiveDevices = _liveDevices;   // normally off: no keyboard hook, sound, microphone or camera while capturing
+    }
+
+    /// <summary>
+    /// <c>--view skipspam [--delay 0.1]</c>: runs the whole Automatic check and clicks Skip every interval,
+    /// like a user hammering the button. Prints OK when the summary appears, STUCK if the run stops
+    /// moving, HANG (and exits) if the UI thread stops responding for 5 s.
+    /// </summary>
+    private static void SkipSpam(MainWindow window, Size size)
+    {
+        // --from HangStep: start with a step stuck in a call that ignores Skip, as a hung driver would be.
+        List<AutoRun.StepView>? steps = _fromStep == nameof(HangStep) ? [new HangStep(), .. MainWindow.AutomaticSteps()] : null;
+        var run = window.StartAutomatic(Core.Stress.StressPreset.Quick, steps, w => OffScreen(w, size));
+        var started = DateTime.UtcNow;
+        long lastTick = Environment.TickCount64;
+        int clicks = 0;
+        string current = "";
+        var clicker = new DispatcherTimer { Interval = _delay };
+        clicker.Tick += (_, _) =>
+        {
+            Volatile.Write(ref lastTick, Environment.TickCount64);
+            if (run.StepTitle.Text != current) Console.WriteLine($"{(DateTime.UtcNow - started).TotalSeconds,5:0.0}s  {run.StepCounter.Text}: {current = run.StepTitle.Text}");
+            if (run.Stage.Content is AutoRun.SummaryView)
+            {
+                clicker.Stop();
+                Console.WriteLine($"OK: summary after {clicks} skips in {(DateTime.UtcNow - started).TotalSeconds:0.0} s");
+                Application.Current.Shutdown();
+                return;
+            }
+            if (run.SkipButton.IsVisible && run.SkipButton.IsEnabled)
+            {
+                run.SkipButton.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                clicks++;
+            }
+            if ((DateTime.UtcNow - started).TotalSeconds > 120)
+            {
+                Console.WriteLine($"STUCK: UI responsive but still on '{current}' after {clicks} skips");
+                Application.Current.Shutdown();
+            }
+        };
+        clicker.Start();
+        new Thread(() =>
+        {
+            while (true)
+            {
+                Thread.Sleep(500);
+                if (Environment.TickCount64 - Volatile.Read(ref lastTick) < 5000) continue;
+                Console.WriteLine($"HANG: UI thread blocked for 5 s on '{current}' after {clicks} skips");
+                Console.Out.Flush();
+                Environment.Exit(2);
+            }
+        }) { IsBackground = true }.Start();
     }
 
     /// <summary>The page's main scroll area: the first ScrollViewer in the visual tree.</summary>
@@ -154,6 +214,14 @@ internal static class Snapshot
         new("keyboard", "Keyboard", Core.Testing.TestOutcome.Fail, "82 of 84 keys worked. Not working: F7, Right Shift."),
         new("touchpad", "Touchpad", Core.Testing.TestOutcome.Warn, "96% of the surface, both buttons and vertical scroll work; horizontal scroll didn't register."),
     ];
+
+    /// <summary>A step stuck in a call that never returns and ignores cancellation, like a hung driver.</summary>
+    private sealed class HangStep : AutoRun.StepView
+    {
+        public override string Id => "hang";
+        public override string Title => "Stuck step";
+        protected override Task OnStartAsync(CancellationToken ct) => Task.Delay(Timeout.Infinite, CancellationToken.None);
+    }
 
     /// <summary>Records <see cref="SampleResults"/> so the summary layout can be checked.</summary>
     private sealed class SampleResultsStep : AutoRun.StepView

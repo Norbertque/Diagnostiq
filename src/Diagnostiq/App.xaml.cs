@@ -11,6 +11,7 @@ public partial class App : Application
         base.OnStartup(e);
         DispatcherUnhandledException += OnUnhandledException;
         Controls.SmoothScrolling.Register();
+        UiWatchdog.Start(Dispatcher);
 
 #if DEBUG
         if (DevTools.AssetRenderer.TryParse(e.Args, out var assetDir))
@@ -59,8 +60,12 @@ public partial class App : Application
         Interop.KeyboardHook.ReleaseAll();   // never leave the keyboard captured after an error
         LogError(e.Exception);
 
-        System.Windows.MessageBox.Show($"Something went wrong: {e.Exception.Message}\n\nThe app will keep running. Details were saved to {ErrorLogPath}.",
-            "Diagnostiq", MessageBoxButton.OK, MessageBoxImage.Warning);
+        // Owned by the active window: unowned, it can open behind the topmost fullscreen test window, out
+        // of sight, and block the app while it waits to be closed.
+        var owner = Windows.OfType<Window>().FirstOrDefault(w => w.IsActive) ?? MainWindow;
+        var text = $"Something went wrong: {e.Exception.Message}\n\nThe app will keep running. Details were saved to {ErrorLogPath}.";
+        if (owner is { IsLoaded: true }) System.Windows.MessageBox.Show(owner, text, "Diagnostiq", MessageBoxButton.OK, MessageBoxImage.Warning);
+        else System.Windows.MessageBox.Show(text, "Diagnostiq", MessageBoxButton.OK, MessageBoxImage.Warning);
         e.Handled = true;
     }
 }

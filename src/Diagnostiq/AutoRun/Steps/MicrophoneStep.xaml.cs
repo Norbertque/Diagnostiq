@@ -23,27 +23,28 @@ public partial class MicrophoneStep : StepView
     public override string Id => TestIds.Microphone;
     public override string Title => "Microphone";
 
-    protected override Task OnStartAsync(CancellationToken ct)
+    protected override async Task OnStartAsync(CancellationToken ct)
     {
-        if (!Ctx.LiveDevices) return Task.CompletedTask;
-        try
-        {
-            _mic = new MicRecorder();
-            _mic.LevelChanged += level => Dispatcher.BeginInvoke(() => OnLevel(level));
-            _mic.Start();
-            DeviceText.Text = $"Listening with {_mic.DeviceName}";
-        }
+        if (!Ctx.LiveDevices) return;
+        // Opening a microphone (a Bluetooth headset switching profile, a driver waking up) can take a
+        // while: do it off the UI thread, and close it again if the step was skipped meanwhile.
+        var mic = new MicRecorder();
+        mic.LevelChanged += level => Dispatcher.BeginInvoke(() => OnLevel(level));
+        try { await Task.Run(mic.Start, CancellationToken.None); }
         catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException)
         {
-            _mic?.Dispose();
-            _mic = null;
+            _ = Task.Run(mic.Dispose);
+            if (ct.IsCancellationRequested) return;
             DeviceText.Text = "No working microphone found.";
             HearsIcon.State = CheckState.Fail;
             HearsText.Text = "Windows doesn't report a microphone.";
             RecordButton.IsEnabled = false;
             Ctx.Suggest(TestOutcome.Fail);
-            return Task.CompletedTask;
+            return;
         }
+        if (ct.IsCancellationRequested) { _ = Task.Run(mic.Dispose); return; }
+        _mic = mic;
+        DeviceText.Text = $"Listening with {mic.DeviceName}";
 
         _silenceHint = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
         _silenceHint.Tick += (_, _) =>
@@ -54,7 +55,6 @@ public partial class MicrophoneStep : StepView
                                  "Settings › Privacy & security › Microphone lets desktop apps use it.";
         };
         _silenceHint.Start();
-        return Task.CompletedTask;
     }
 
     private void OnLevel(float level)
@@ -121,7 +121,8 @@ public partial class MicrophoneStep : StepView
     {
         _silenceHint?.Stop();
         _stopPlayback?.Cancel();   // don't play the recording over the next step
-        _mic?.Dispose();
+        // Stopping waits for the capture thread: never on the UI thread.
+        if (_mic is { } mic) _ = Task.Run(mic.Dispose);
         _mic = null;
     }
 }

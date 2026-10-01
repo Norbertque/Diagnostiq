@@ -20,9 +20,12 @@ public sealed class AutoRunContext(SystemSnapshot snapshot, SensorService? senso
 
     public Task<TestOutcome> WaitForJudgementAsync(CancellationToken ct)
     {
-        _judgement = new TaskCompletionSource<TestOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
-        ct.Register(() => _judgement.TrySetCanceled(ct));
-        return _judgement.Task;
+        // A step the run left behind after Skip gets here late: it mustn't take over the current step's verdict.
+        if (ct.IsCancellationRequested) return Task.FromCanceled<TestOutcome>(ct);
+        var judgement = new TaskCompletionSource<TestOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _judgement = judgement;
+        ct.Register(() => judgement.TrySetCanceled(ct));   // this step's verdict, whichever step is current by then
+        return judgement.Task;
     }
 
     /// <summary>Records the verdict for the current judged step (from the top bar or the step itself).</summary>

@@ -67,8 +67,11 @@ public partial class SpeakersStep : StepView
     {
         _player.Stop();
         if (_originalVolume is not { } v) return;
-        try { AudioDevices.RestoreDefaultOutputVolume(v); }
-        catch (System.Runtime.InteropServices.COMException) { }   // the device is gone: nothing to restore
+        _ = Task.Run(() =>   // an audio-service call: keep it off the UI thread
+        {
+            try { AudioDevices.RestoreDefaultOutputVolume(v); }
+            catch (System.Runtime.InteropServices.COMException) { }   // the device is gone: nothing to restore
+        });
     }
 }
 

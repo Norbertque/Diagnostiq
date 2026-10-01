@@ -23,6 +23,9 @@ public partial class AutoRunWindow : Window
     /// <summary>How long a stopped run may take to wind down before the window closes anyway.</summary>
     private static readonly TimeSpan StopGrace = TimeSpan.FromSeconds(10), AutomaticStopGrace = TimeSpan.FromSeconds(60);
 
+    /// <summary>How long a skipped step may take to stop before the run moves on without it.</summary>
+    private static readonly TimeSpan SkipGrace = TimeSpan.FromSeconds(1.5), AutomaticSkipGrace = TimeSpan.FromSeconds(8);
+
     private readonly AutoRunContext _ctx;
     private readonly List<StepView> _steps;
     private readonly List<Border> _segments = [];
@@ -49,7 +52,8 @@ public partial class AutoRunWindow : Window
             _segments.Add(seg);
             Segments.Children.Add(seg);
         }
-        _ctx.Suggested += outcome => Dispatcher.Invoke(() => Highlight(outcome));
+        // Never blocks the caller: a step suggesting from a device thread mustn't wait on the UI.
+        _ctx.Suggested += outcome => { if (Dispatcher.CheckAccess()) Highlight(outcome); else Dispatcher.BeginInvoke(() => Highlight(outcome)); };
         PreviewKeyDown += OnPreviewKeyDown;
         Closing += OnClosing;
         Closed += (_, _) => _closed = true;
@@ -91,12 +95,14 @@ public partial class AutoRunWindow : Window
 
     private async Task RunStepAsync(StepView step, int index)
     {
-        using var stepCts = CancellationTokenSource.CreateLinkedTokenSource(_runCts.Token);
+        var stepCts = CancellationTokenSource.CreateLinkedTokenSource(_runCts.Token);
         _stepCts = stepCts;
+        Task? run = null;
         try
         {
             Show(step, index);
-            await step.RunAsync(_ctx, stepCts.Token);
+            run = step.RunAsync(_ctx, stepCts.Token);
+            await UntilDoneOrLeftBehindAsync(step, run, stepCts.Token);
         }
         catch (OperationCanceledException) when (stepCts.IsCancellationRequested)
         {
@@ -114,9 +120,37 @@ public partial class AutoRunWindow : Window
             try { step.Cleanup(); }
             catch (Exception ex) { App.LogError(ex); }
             _stepCts = null;
+            // A step left behind by Skip still holds the token: dispose it once that step is done.
+            if (run is null || run.IsCompleted) stepCts.Dispose();
+            else _ = run.ContinueWith(_ => stepCts.Dispose(), TaskScheduler.Default);
             _current = null;
         }
         PaintSegment(index, _ctx.Run[step.Id]?.Outcome);
+    }
+
+    /// <summary>
+    /// Skip must always move on. A step normally stops as soon as it's cancelled, but one stuck in a
+    /// driver or WMI call can't; after a short grace it's left to finish in the background (its
+    /// Cleanup still runs) instead of holding the whole run.
+    /// </summary>
+    private static async Task UntilDoneOrLeftBehindAsync(StepView step, Task run, CancellationToken ct)
+    {
+        var cancelled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using (ct.Register(() => cancelled.TrySetResult()))
+        {
+            if (await Task.WhenAny(run, cancelled.Task) == cancelled.Task && !run.IsCompleted)
+            {
+                // Measuring steps (stress, disk) finish their current pass, which can take a few seconds.
+                var grace = step.Mode == StepMode.Automatic ? AutomaticSkipGrace : SkipGrace;
+                if (await Task.WhenAny(run, Task.Delay(grace)) != run)
+                {
+                    App.LogError(new TimeoutException($"Step \"{step.Title}\" didn't stop within {grace.TotalSeconds:0.#} s of Skip; the run moved on without it."));
+                    _ = run.ContinueWith(t => { if (t.Exception is { } ex) App.LogError(ex); }, TaskScheduler.Default);
+                    throw new OperationCanceledException(ct);
+                }
+            }
+        }
+        await run;
     }
 
     private void RecordMissing(StepView step, string? detail)
@@ -138,6 +172,7 @@ public partial class AutoRunWindow : Window
             if (i >= index) PaintSegment(i, null, current: i == index);
         Present(step);
         Announce($"{StepCounter.Text}: {step.Title}");
+        UiWatchdog.Where = $"{StepCounter.Text}: {step.Title}";
     }
 
     private void ShowSummary()
@@ -151,6 +186,7 @@ public partial class AutoRunWindow : Window
         var summary = new SummaryView(_ctx.Run, _ctx.Snapshot, _ctx.Session, saveReport: _ctx.LiveDevices);
         Present(summary);
         Announce($"Automatic check {StepTitle.Text.ToLowerInvariant()}. {summary.Headline}");
+        UiWatchdog.Where = "Automatic check summary";
     }
 
     /// <summary>Slides the new screen in from the right (skipped when Windows animations are off).</summary>

@@ -18,54 +18,68 @@ public partial class WebcamStep : StepView
     private long _lastShown;
     private string? _format;
     private System.Windows.Threading.DispatcherTimer? _noFrames;
+    private int _generation;
 
     public WebcamStep() => InitializeComponent();
 
     public override string Id => TestIds.Webcam;
     public override string Title => "Camera";
 
-    protected override Task OnStartAsync(CancellationToken ct)
+    protected override async Task OnStartAsync(CancellationToken ct)
     {
-        if (!Ctx.LiveDevices) { Overlay.Text = "Camera preview"; return Task.CompletedTask; }
+        if (!Ctx.LiveDevices) { Overlay.Text = "Camera preview"; return; }
 
+        // DirectShow enumeration and start-up can stall on a slow or stuck driver: keep them off the UI thread.
         // Windows Hello IR cameras also enumerate; they show a dark, grainy picture, so list them last.
-        _cameras = new FilterInfoCollection(FilterCategory.VideoInputDevice).Cast<FilterInfo>()
-            .OrderBy(c => c.Name.Contains("IR", StringComparison.Ordinal) ? 1 : 0).ToList();
+        Overlay.Text = "Looking for a camera…";
+        var cameras = await Task.Run(() => new FilterInfoCollection(FilterCategory.VideoInputDevice).Cast<FilterInfo>()
+            .OrderBy(c => c.Name.Contains("IR", StringComparison.Ordinal) ? 1 : 0).ToList(), CancellationToken.None);
+        if (ct.IsCancellationRequested) return;
+        _cameras = cameras;
         if (_cameras.Count == 0)
         {
             Overlay.Text = "No camera found. It may be switched off in BIOS or missing a driver.";
             DeviceText.Text = "Windows doesn't report a camera.";
             Ctx.Suggest(TestOutcome.Fail);
-            return Task.CompletedTask;
+            return;
         }
         SwitchButton.Visibility = _cameras.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
-        Open(0);
-        return Task.CompletedTask;
+        await OpenAsync(0);
     }
 
-    private void Open(int index)
+    /// <summary>
+    /// Opens a camera in the background. If the step ended or another camera was chosen meanwhile
+    /// (<see cref="_generation"/> moved on), the camera that just started is stopped again at once.
+    /// </summary>
+    private async Task OpenAsync(int index)
     {
         Close();
+        int generation = _generation;
         _index = index;
         _frames = 0;
         var info = _cameras[index];
-        _device = new VideoCaptureDevice(info.MonikerString);
-
-        // A 720p-class mode is plenty to judge the picture and cheap for old laptops.
-        var modes = _device.VideoCapabilities;
-        var mode = modes.Where(m => m.FrameSize.Width <= 1920).OrderByDescending(m => m.FrameSize.Width <= 1280)
-                        .ThenByDescending(m => m.FrameSize.Width).ThenByDescending(m => m.AverageFrameRate).FirstOrDefault()
-                   ?? modes.FirstOrDefault();
-        if (mode is not null) _device.VideoResolution = mode;
-        _format = mode is null ? null : $"{mode.FrameSize.Width} × {mode.FrameSize.Height}, {mode.AverageFrameRate} fps";
-        DeviceText.Text = $"{info.Name}{(_format is null ? "" : $" · {_format}")}";
-
-        _device.NewFrame += OnFrame;
-        _device.VideoSourceError += (_, e) => Dispatcher.BeginInvoke(() => Overlay.Text = $"The camera reported an error: {e.Description}");
         Overlay.Text = "Starting the camera…";
         Overlay.Visibility = Visibility.Visible;
-        _device.Start();
 
+        var (device, format) = await Task.Run(() =>
+        {
+            var d = new VideoCaptureDevice(info.MonikerString);
+            // A 720p-class mode is plenty to judge the picture and cheap for old laptops.
+            var modes = d.VideoCapabilities;   // builds a DirectShow graph the first time
+            var mode = modes.Where(m => m.FrameSize.Width <= 1920).OrderByDescending(m => m.FrameSize.Width <= 1280)
+                            .ThenByDescending(m => m.FrameSize.Width).ThenByDescending(m => m.AverageFrameRate).FirstOrDefault()
+                       ?? modes.FirstOrDefault();
+            if (mode is not null) d.VideoResolution = mode;
+            d.NewFrame += OnFrame;
+            d.VideoSourceError += (_, e) => Dispatcher.BeginInvoke(() => Overlay.Text = $"The camera reported an error: {e.Description}");
+            d.Start();
+            return (d, mode is null ? null : $"{mode.FrameSize.Width} × {mode.FrameSize.Height}, {mode.AverageFrameRate} fps");
+        });
+        if (generation != _generation) { Stop(device); return; }   // skipped, or switched again, while starting
+
+        _device = device;
+        _format = format;
+        DeviceText.Text = $"{info.Name}{(_format is null ? "" : $" · {_format}")}";
         _noFrames?.Stop();
         _noFrames = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
         _noFrames.Tick += (_, _) =>
@@ -104,17 +118,29 @@ public partial class WebcamStep : StepView
         finally { frame.UnlockBits(data); }
     }
 
-    private void Switch_Click(object sender, RoutedEventArgs e) => Open((_index + 1) % _cameras.Count);
+    private async void Switch_Click(object sender, RoutedEventArgs e)
+    {
+        try { await OpenAsync((_index + 1) % _cameras.Count); }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or ApplicationException)
+        {
+            Overlay.Text = $"That camera couldn't be opened: {ex.Message}";
+        }
+    }
 
     private void Close()
     {
+        _generation++;   // a camera still starting in the background is stopped as soon as it's up
         _noFrames?.Stop();
         if (_device is null) return;
-        _device.NewFrame -= OnFrame;
-        _device.SignalToStop();
-        var device = _device;
+        Stop(_device);
         _device = null;
-        Task.Run(() => device.WaitForStop());   // can take a moment; don't block the UI
+    }
+
+    private void Stop(VideoCaptureDevice device)
+    {
+        device.NewFrame -= OnFrame;
+        device.SignalToStop();
+        Task.Run(device.WaitForStop);   // can take a moment; don't block the UI
     }
 
     protected override string? Detail(TestOutcome outcome) => outcome switch

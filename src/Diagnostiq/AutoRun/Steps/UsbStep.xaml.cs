@@ -21,12 +21,14 @@ public partial class UsbStep : StepView
     public override string Id => TestIds.Usb;
     public override string Title => "USB ports";
 
-    protected override Task OnStartAsync(CancellationToken ct)
+    protected override async Task OnStartAsync(CancellationToken ct)
     {
-        if (!Ctx.LiveDevices) return Task.CompletedTask;
-        _watcher = new UsbPortWatcher();
+        if (!Ctx.LiveDevices) return;
+        // Listing the devices already plugged in is a SetupAPI walk: keep it off the UI thread.
+        var watcher = await Task.Run(() => new UsbPortWatcher(), CancellationToken.None);
+        if (ct.IsCancellationRequested) { watcher.Dispose(); return; }   // skipped meanwhile
+        _watcher = watcher;
         _watcher.Arrived += a => Dispatcher.BeginInvoke(() => OnArrived(a));
-        return Task.CompletedTask;
     }
 
     private void OnArrived(UsbArrival a)

@@ -32,6 +32,16 @@ public static class ReportWriter
         return new SavedReport(html, json);
     }
 
+    /// <summary>Writes one file where the user chose: JSON for a .json path, the HTML page otherwise.</summary>
+    public static void SaveAs(ReportModel model, string path)
+    {
+        bool json = Path.GetExtension(path).Equals(".json", StringComparison.OrdinalIgnoreCase);
+        File.WriteAllText(path, json ? JsonSerializer.Serialize(model, Json) : HtmlReport.Render(model));
+    }
+
+    /// <summary>Suggested name for a report file, without extension.</summary>
+    public static string SuggestedName(ReportModel model) => FileName(model);
+
     public static string DefaultFolder()
     {
         var beside = Path.Combine(AppContext.BaseDirectory, "Reports");

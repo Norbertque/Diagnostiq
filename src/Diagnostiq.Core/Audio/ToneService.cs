@@ -35,8 +35,12 @@ public static class ToneService
         ct.ThrowIfCancellationRequested();
     }
 
-    /// <summary>Plays a finite stream on the default output device and completes when it ends.</summary>
-    internal static async Task PlayToEndAsync(IWaveProvider source, CancellationToken ct)
+    /// <summary>
+    /// Plays a finite stream on the default output device and completes when it ends. Runs on the thread
+    /// pool: stopping waits for the player's thread, which must never happen on the UI thread (cancelling
+    /// from a Skip click would otherwise run that wait right there).
+    /// </summary>
+    internal static Task PlayToEndAsync(IWaveProvider source, CancellationToken ct) => Task.Run(async () =>
     {
         using var output = new WasapiPlayerBuilder().WithSharedMode().WithLatency(80).Build();
         var finished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -46,9 +50,10 @@ public static class ToneService
         };
         output.Init(source);
         output.Play();
-        using (ct.Register(() => output.Stop()))
+        // Cancelling only wakes this task; the player is stopped and disposed here, off the caller's thread.
+        using (ct.Register(() => finished.TrySetCanceled(ct)))
             await finished.Task.ConfigureAwait(false);
-    }
+    }, CancellationToken.None);
 }
 
 /// <summary>Linear fade in/out so tones start and stop without a click.</summary>

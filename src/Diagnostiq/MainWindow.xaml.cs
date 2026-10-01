@@ -159,6 +159,7 @@ public partial class MainWindow : FluentWindow
     public void Navigate(FrameworkElement view)
     {
         Host.Content = view;
+        UiWatchdog.Where = view.GetType().Name;
         if (AnimationsEnabled)
         {
             // Fluent "entrance": short fade + 12 px rise, decelerating.

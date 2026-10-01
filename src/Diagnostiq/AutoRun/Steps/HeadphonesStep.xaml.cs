@@ -25,24 +25,31 @@ public partial class HeadphonesStep : StepView
     public override string Id => TestIds.Headphones;
     public override string Title => "Headphone jack";
 
-    protected override Task OnStartAsync(CancellationToken ct)
+    protected override async Task OnStartAsync(CancellationToken ct)
     {
-        if (!Ctx.LiveDevices) return Task.CompletedTask;
-        _devices = new MMDeviceEnumerator();
-        _notifications = _devices.CreateNotificationClient(useSynchronizationContext: true);
-        _notifications.DefaultDeviceChanged += (_, _) => Check();
-        _notifications.DeviceStateChanged += (_, _) => Check();
-        _notifications.PropertyValueChanged += (_, _) => Check();
+        if (!Ctx.LiveDevices) return;
+        // Audio-service calls stay off the UI thread; notifications arrive on the audio worker thread
+        // and are handed over without waiting.
+        var (devices, notifications) = await Task.Run(() =>
+        {
+            var d = new MMDeviceEnumerator();
+            return (d, d.CreateNotificationClient(useSynchronizationContext: false));
+        }, CancellationToken.None);
+        if (ct.IsCancellationRequested) { _ = Task.Run(() => { notifications.Dispose(); devices.Dispose(); }); return; }
+        _devices = devices;
+        _notifications = notifications;
+        notifications.DefaultDeviceChanged += (_, _) => Dispatcher.BeginInvoke(Check);
+        notifications.DeviceStateChanged += (_, _) => Dispatcher.BeginInvoke(Check);
+        notifications.PropertyValueChanged += (_, _) => Dispatcher.BeginInvoke(Check);
         Check();
-        return Task.CompletedTask;
     }
 
-    private void Check()
+    private async void Check()
     {
         if (_detected || _devices is null) return;   // already found, or a notification queued before the step ended
-        OutputDevice? output;
-        try { output = AudioDevices.DefaultOutput(); }
-        catch (COMException) { return; }   // the endpoint is mid-change; the next notification tries again
+        // The endpoint may be mid-change; the next notification tries again.
+        var output = await Task.Run(() => { try { return AudioDevices.DefaultOutput(); } catch (COMException) { return null; } });
+        if (_detected || _devices is null) return;   // found meanwhile, or the step ended
         if (output is not { IsHeadphones: true }) return;
         _detected = true;
         JackIcon.State = CheckState.Pass;
@@ -71,9 +78,9 @@ public partial class HeadphonesStep : StepView
     public override void Cleanup()
     {
         _player.Stop();
-        _notifications?.Dispose();
-        _devices?.Dispose();
+        var (devices, notifications) = (_devices, _notifications);
         _notifications = null;
         _devices = null;
+        _ = Task.Run(() => { notifications?.Dispose(); devices?.Dispose(); });   // unregistering waits on the audio service
     }
 }

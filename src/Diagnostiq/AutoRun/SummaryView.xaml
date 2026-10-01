@@ -11,26 +11,31 @@
 
             <ContentControl x:Name="ScoreHost" Focusable="False" IsTabStop="False" />
 
-            <!-- Saved report: where it went and how to open it. -->
+            <!-- Saved report: where it went, how to open it, and a copy wherever the user wants it. -->
             <Border Style="{StaticResource Diag.Banner.Info}" Margin="0,0,0,20">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
                     <ui:SymbolIcon Symbol="Document24" FontSize="20" Margin="0,1,12,0" VerticalAlignment="Top"
                                    Foreground="{DynamicResource Diag.InfoForegroundBrush}" />
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock x:Name="ReportTitle" Style="{StaticResource Diag.Text.BodyStrong}" Text="Saving the report…" />
                         <TextBlock x:Name="ReportPath" Style="{StaticResource Diag.Text.Caption}" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
-                    <StackPanel x:Name="ReportActions" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0"
-                                Visibility="Collapsed">
-                        <ui:Button Appearance="Primary" Content="Open report" Icon="{ui:SymbolIcon Open24}" MinHeight="40" Padding="16,8"
-                                   Click="OpenReport_Click" />
-                        <ui:Button Content="Show in folder" MinHeight="40" Padding="16,8" Margin="8,0,0,0" Click="ShowFolder_Click" />
-                    </StackPanel>
+                    <WrapPanel Grid.Row="1" Grid.Column="1" Margin="0,12,0,0">
+                        <ui:Button x:Name="OpenButton" Appearance="Primary" Content="Open report" Icon="{ui:SymbolIcon Open24}" MinHeight="40" Padding="16,8"
+                                   Margin="0,0,8,0" Visibility="Collapsed" Click="OpenReport_Click" />
+                        <ui:Button x:Name="DownloadButton" Content="Download report" Icon="{ui:SymbolIcon ArrowDownload24}" MinHeight="40" Padding="16,8"
+                                   Margin="0,0,8,0" ToolTip="Save a copy wherever you like, such as Downloads or a USB stick" Click="Download_Click" />
+                        <ui:Button x:Name="FolderButton" Content="Show in folder" MinHeight="40" Padding="16,8" Visibility="Collapsed"
+                                   Click="ShowFolder_Click" />
+                    </WrapPanel>
                 </Grid>
             </Border>
 

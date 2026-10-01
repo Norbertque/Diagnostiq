@@ -17,7 +17,9 @@ public static class HtmlReport
             <!doctype html>
             <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
             <title>{E($"Laptop report: {m.Device.Name}{(m.Device.Serial is { } sn ? $" ({sn})" : "")}")}</title>
-            <style>{Css}</style></head><body><main>
+            <style>{Css}</style></head><body>
+            <div class="toolbar"><button type="button" onclick="window.print()">Print or save as PDF</button></div>
+            <main>
             """);
 
         // Header: what machine, when, overall verdict.
@@ -184,11 +186,14 @@ public static class HtmlReport
         .chart .temp{stroke:var(--fail)}.chart .clock{stroke:var(--accent);opacity:.8}
         .legend{color:var(--muted);font-size:12px}.legend .k{display:inline-block;width:14px;height:3px;margin:0 6px 3px 12px;vertical-align:middle}
         .legend .k:first-child{margin-left:0}.legend .temp{background:var(--fail)}.legend .clock{background:var(--accent)}
+        .toolbar{max-width:920px;margin:16px auto 0;display:flex;justify-content:flex-end}
+        .toolbar button{font:600 14px/1 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;color:#fff;background:var(--accent);border:0;border-radius:6px;padding:10px 16px;cursor:pointer}
+        .toolbar button:hover{background:#0053a0}.toolbar button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
         footer{margin-top:36px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
-        @media (max-width:700px){main{margin:0;border-radius:0;padding:24px 16px}.grid{grid-template-columns:1fr}header{flex-direction:column}
+        @media (max-width:700px){.toolbar{margin:12px 16px 0}main{margin:0;border-radius:0;padding:24px 16px}.grid{grid-template-columns:1fr}header{flex-direction:column}
           .list tr{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;padding:8px 0;border-bottom:1px solid var(--line)}
           .list td{display:block;width:auto !important;padding:0;border:0}.list td.pts{grid-column:3;grid-row:1}
           .list td:nth-child(3){grid-column:1/-1}}
-        @media print{body{background:#fff}main{box-shadow:none;margin:0;padding:0;max-width:none}section,tr,.spec{break-inside:avoid}}
+        @media print{.toolbar{display:none}body{background:#fff}main{box-shadow:none;margin:0;padding:0;max-width:none}section,tr,.spec{break-inside:avoid}}
         """;
 }
